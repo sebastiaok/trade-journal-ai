@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import type { Account, Trade } from '../data/types';
-import { parseOcrText, parseTradeFile } from '../lib/importTrades';
+import { HEADER_ALIASES, parseOcrText, parseTradeFile } from '../lib/importTrades';
 import TradeReviewTable from './TradeReviewTable';
 
 type Draft = Omit<Trade, 'id'>;
@@ -84,6 +84,27 @@ export default function TradeImportPanel({ accounts, defaultAccountId, onConfirm
             <span className="cap-drop-text">{busy ? '읽는 중...' : '거래내역 파일 선택'}</span>
           </label>
           <p className="cap-note">권장 헤더: 종목, 구분, 단가, 수량, 금액, 수수료, 세금, 체결일시, 사유, 태그</p>
+          <details className="cap-header-guide">
+            <summary>인식 가능한 헤더명 보기</summary>
+            <div className="cap-header-guide-body">
+              <p><strong>필수:</strong></p>
+              <ul>
+                <li>종목 → {HEADER_ALIASES.symbol.join(', ')}</li>
+                <li>구분 → {HEADER_ALIASES.side.join(', ')}</li>
+                <li>단가 → {HEADER_ALIASES.price.join(', ')}</li>
+                <li>수량 → {HEADER_ALIASES.quantity.join(', ')}</li>
+              </ul>
+              <p><strong>선택:</strong></p>
+              <ul>
+                <li>금액 → {HEADER_ALIASES.amount.join(', ')}</li>
+                <li>수수료 → {HEADER_ALIASES.fee.join(', ')}</li>
+                <li>세금 → {HEADER_ALIASES.tax.join(', ')}</li>
+                <li>일시 → {HEADER_ALIASES.executedAt.join(', ')}</li>
+              </ul>
+              <p className="cap-note">주요 증권사 호환: 키움, 삼성, 미래에셋, NH, 한국투자</p>
+              <p className="cap-note">매매구분: 매수, 매도, 보통매수, 보통매도, 현금매수, 현금매도 등</p>
+            </div>
+          </details>
         </section>
 
         <section className="imp-box">

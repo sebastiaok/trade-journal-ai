@@ -7,7 +7,7 @@ export type Side = 'buy' | 'sell' | 'deposit' | 'withdrawal';
 //  withdrawal    : 인출 (현금 유출)
 
 export type Emotion = 'calm' | 'fomo' | 'fear' | 'greedy' | 'revenge';
-export type Source = 'vision' | 'manual';
+export type Source = 'vision' | 'manual' | 'opening' | 'api';
 
 // IRP는 자금 출처에 따라 둘로 구분한다.
 //  irp        : 개인 자기부담 IRP (세액공제 대상 자기부담금 납입)
@@ -34,6 +34,123 @@ export interface Account {
   type: AccountType;
   broker?: string;
   openedAt?: string;     // 개설일 (ISO) — ISA 의무가입기간 계산용
+  note?: string;
+  cashBalance: number;   // 예수금 (원 단위, 기본 0)
+}
+
+/** 입출금 기록 */
+export interface AccountDeposit {
+  id: string;
+  accountId: string;
+  amount: number;
+  kind: 'deposit' | 'withdraw';
+  memo?: string;
+  occurredAt: string;    // ISO
+  createdAt: string;     // ISO
+}
+
+/** 보유현황 (계좌별·종목별 캐시) */
+export interface Holding {
+  id: string;
+  accountId: string;
+  symbol: string;
+  code?: string;
+  quantity: number;
+  avgCost: number;
+  updatedAt: string;
+}
+
+/** 실현손익 행 (매도 FIFO 매칭 결과, 매도 1건당 1~N행) */
+export interface RealizedPnlRow {
+  id: string;
+  accountId: string;
+  symbol: string;
+  sellTradeId: string;
+  buyTradeId?: string;
+  matchedQty: number;
+  buyPrice: number;
+  sellPrice: number;
+  pnlAmount: number;
+  feeAmount: number;
+  taxAmount: number;
+  realizedAt: string;
+}
+
+/** 분석 노트 상태 */
+export type AnalysisStatus = 'draft' | 'active' | 'closed';
+
+/** 회고 판정 라벨 */
+export type RetroLabel = '목표 달성' | '손절 실행' | '중간 청산' | '조기 익절' | '손절 미준수';
+
+/** 분석 노트 (종목 분석 → 매매 연결 → 회고) */
+export interface AnalysisNote {
+  id: string;
+  accountId: string;
+  symbol: string;
+  code?: string;
+  status: AnalysisStatus;
+  thesis?: string;            // 투자 논리
+  targetPrice?: number;       // 목표가
+  stopPrice?: number;         // 손절가
+  targetPct?: number;         // 목표 비중 (%)
+  checklist: { id: string; label: string; checked: boolean }[];
+  retroMemo?: string;         // 회고 메모
+  retroLabel?: RetroLabel;    // 자동 판정 라벨
+  analyzedAt: string;         // ISO date
+  closedAt?: string;          // ISO
+  createdAt: string;          // ISO
+}
+
+/** 포트폴리오 스냅샷 (일별 자산 기록) */
+export interface PortfolioSnapshot {
+  id: string;
+  snapshotDate: string;       // YYYY-MM-DD
+  totalValue: number;         // 총 평가액
+  totalCost: number;          // 총 취득원가
+  cash: number;               // 현금
+  details: SnapshotDetail[];  // 종목별 내역
+  createdAt: string;
+}
+
+export interface SnapshotDetail {
+  accountId: string;
+  symbol: string;
+  quantity: number;
+  avgCost: number;
+  value: number;              // 평가액 (현재가 × 수량, 없으면 avgCost × 수량)
+}
+
+/** 종목 마스터 */
+export interface Ticker {
+  code: string;
+  name: string;
+  market?: string;
+  sector?: string;
+  currency?: string;
+}
+
+/** 시세 캐시 (종목별 최신가) */
+export interface PriceCache {
+  tickerCode: string;
+  price: number;
+  fetchedAt: string;            // ISO
+}
+
+/** 목표 배분 (섹터별 비중) */
+export interface TargetAllocation {
+  id: string;
+  sector: string;
+  targetPct: number;          // 목표 비중 (%)
+}
+
+/** 세제 한도 (연도별 법정 기준값, 참고용) */
+export interface TaxLimit {
+  id: string;
+  accountType: 'isa' | 'pension' | 'irp';
+  year: number;
+  annualLimit?: number;
+  cumulativeLimit?: number;
+  deductionLimit?: number;
   note?: string;
 }
 
@@ -74,6 +191,7 @@ export interface Trade {
   source: Source;
   confidence?: number;
   linkedCheckId?: string;
+  analysisId?: string;       // 분석 노트 연결 (analysis_notes FK)
   // 세액공제 트래커용: DC 전환 등 세액공제 비대상 납입을 표시
   taxDeductible?: boolean; // 기본 true. irp_dc의 이전금/한도초과분은 false 권장
 }

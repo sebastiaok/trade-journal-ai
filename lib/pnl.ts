@@ -41,9 +41,15 @@ function daysBetween(a: string, b: string): number {
   return Math.max(0, Math.round(ms / 86_400_000));
 }
 
+/**
+ * computeRealized — 클라이언트 FIFO 매칭
+ * 계좌별(accountId) + 종목별(symbol) 큐 분리로 올바른 손익 계산.
+ * source='opening' 거래도 일반 매수와 동일하게 FIFO 큐에 참여.
+ */
 export function computeRealized(input: Trade[]): RealizedResult {
   const sorted = [...input].sort(byTime);
-  const lotsBySymbol = new Map<string, Lot[]>();
+  // 키: "accountId|symbol" → 계좌별 FIFO 큐 분리
+  const lotsByKey = new Map<string, Lot[]>();
   const out = new Map<string, Trade>();
   const matches: RealizedResult['matches'] = [];
 
@@ -53,16 +59,18 @@ export function computeRealized(input: Trade[]): RealizedResult {
     // 납입/인출은 매매 매칭에서 제외
     if (!isTrade(t)) continue;
 
+    const key = `${t.accountId}|${t.symbol}`;
+
     if (t.side === 'buy') {
-      const lots = lotsBySymbol.get(t.symbol) ?? [];
+      const lots = lotsByKey.get(key) ?? [];
       const feePerShare = t.quantity > 0 ? num(t.fee) / t.quantity : 0;
       lots.push({ qty: t.quantity, price: t.price, feePerShare, date: t.executedAt });
-      lotsBySymbol.set(t.symbol, lots);
+      lotsByKey.set(key, lots);
       continue;
     }
 
-    // sell: FIFO 매칭
-    const lots = lotsBySymbol.get(t.symbol) ?? [];
+    // sell: FIFO 매칭 (같은 계좌+종목 큐에서만)
+    const lots = lotsByKey.get(key) ?? [];
     let remaining = t.quantity;
     let matchedCost = 0;
     let matchedQty = 0;
@@ -78,7 +86,7 @@ export function computeRealized(input: Trade[]): RealizedResult {
       remaining -= take;
       if (lot.qty === 0) lots.shift();
     }
-    lotsBySymbol.set(t.symbol, lots);
+    lotsByKey.set(key, lots);
 
     const proceeds = t.price * matchedQty - num(t.fee) - num(t.tax);
     const pnl = proceeds - matchedCost;
@@ -114,13 +122,18 @@ export interface Position {
   avgPrice: number;
 }
 
+/**
+ * positionBySymbol — 종목별 현재 포지션 (계좌 구분 없이 합산).
+ * 계좌별 포지션이 필요하면 positionByAccountSymbol을 사용.
+ */
 export function positionBySymbol(input: Trade[]): Record<string, Position> {
   const sorted = [...input].sort(byTime);
-  const lotsBySymbol = new Map<string, Lot[]>();
+  const lotsByKey = new Map<string, Lot[]>();
 
   for (const t of sorted) {
     if (!isTrade(t)) continue;
-    const lots = lotsBySymbol.get(t.symbol) ?? [];
+    const key = `${t.accountId}|${t.symbol}`;
+    const lots = lotsByKey.get(key) ?? [];
     if (t.side === 'buy') {
       const feePerShare = t.quantity > 0 ? num(t.fee) / t.quantity : 0;
       lots.push({ qty: t.quantity, price: t.price, feePerShare, date: t.executedAt });
@@ -134,14 +147,22 @@ export function positionBySymbol(input: Trade[]): Record<string, Position> {
         if (lot.qty === 0) lots.shift();
       }
     }
-    lotsBySymbol.set(t.symbol, lots);
+    lotsByKey.set(key, lots);
   }
 
-  const result: Record<string, Position> = {};
-  for (const [symbol, lots] of lotsBySymbol) {
+  // 모든 계좌에서 같은 종목 합산
+  const bySymbol = new Map<string, { qty: number; cost: number }>();
+  for (const [key, lots] of lotsByKey) {
+    const symbol = key.split('|')[1];
     const qty = lots.reduce((s, l) => s + l.qty, 0);
     if (qty <= 0) continue;
     const cost = lots.reduce((s, l) => s + l.qty * l.price, 0);
+    const prev = bySymbol.get(symbol) ?? { qty: 0, cost: 0 };
+    bySymbol.set(symbol, { qty: prev.qty + qty, cost: prev.cost + cost });
+  }
+
+  const result: Record<string, Position> = {};
+  for (const [symbol, { qty, cost }] of bySymbol) {
     result[symbol] = { symbol, quantity: qty, avgPrice: round2(cost / qty) };
   }
   return result;

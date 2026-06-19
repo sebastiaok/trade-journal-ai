@@ -12,7 +12,7 @@
 -- ─────────────────────────────────────────────
 create type account_type as enum ('general', 'isa', 'pension', 'irp', 'irp_dc');
 create type trade_side   as enum ('buy', 'sell', 'deposit', 'withdrawal');
-create type trade_source as enum ('vision', 'manual', 'opening', 'api');
+create type trade_source as enum ('vision', 'manual');
 
 -- ─────────────────────────────────────────────
 -- accounts (계좌)
@@ -24,10 +24,9 @@ create table public.accounts (
   type        account_type not null,
   broker      text,
   opened_at   date,
-  note          text,
-  cash_balance  bigint not null default 0,
-  created_at    timestamptz not null default now(),
-  updated_at    timestamptz not null default now()
+  note        text,
+  created_at  timestamptz not null default now(),
+  updated_at  timestamptz not null default now()
 );
 
 -- ─────────────────────────────────────────────
@@ -107,37 +106,6 @@ create table public.tax_config (
 );
 
 -- ─────────────────────────────────────────────
--- account_deposits (입출금 기록)
--- ─────────────────────────────────────────────
-create table public.account_deposits (
-  id          uuid primary key default gen_random_uuid(),
-  owner       uuid not null references auth.users(id) on delete cascade,
-  account_id  uuid not null references public.accounts(id) on delete cascade,
-  amount      bigint not null,
-  kind        text not null check (kind in ('deposit', 'withdraw')),
-  memo        text,
-  occurred_at timestamptz not null default now(),
-  created_at  timestamptz not null default now()
-);
-
-create index deposits_owner_idx   on public.account_deposits (owner, occurred_at desc);
-create index deposits_account_idx on public.account_deposits (account_id);
-
--- ─────────────────────────────────────────────
--- tax_limits (연도별 법정 한도 참조)
--- ─────────────────────────────────────────────
-create table public.tax_limits (
-  id               uuid primary key default gen_random_uuid(),
-  account_type     text not null check (account_type in ('isa', 'pension', 'irp')),
-  year             int not null,
-  annual_limit     bigint,
-  cumulative_limit bigint,
-  deduction_limit  bigint,
-  note             text,
-  unique(account_type, year)
-);
-
--- ─────────────────────────────────────────────
 -- updated_at 자동 갱신 트리거
 -- ─────────────────────────────────────────────
 create or replace function public.touch_updated_at()
@@ -159,12 +127,10 @@ create trigger taxcfg_touch    before update on public.tax_config
 -- ─────────────────────────────────────────────
 -- RLS (Row Level Security) — 본인 데이터만
 -- ─────────────────────────────────────────────
-alter table public.accounts          enable row level security;
-alter table public.trades            enable row level security;
-alter table public.invest_checks     enable row level security;
-alter table public.tax_config        enable row level security;
-alter table public.account_deposits  enable row level security;
-alter table public.tax_limits        enable row level security;
+alter table public.accounts      enable row level security;
+alter table public.trades        enable row level security;
+alter table public.invest_checks enable row level security;
+alter table public.tax_config    enable row level security;
 
 -- accounts
 create policy "accounts_select_own" on public.accounts
@@ -199,20 +165,6 @@ create policy "checks_delete_own" on public.invest_checks
 -- tax_config
 create policy "taxcfg_all_own" on public.tax_config
   for all using (auth.uid() = owner) with check (auth.uid() = owner);
-
--- account_deposits
-create policy "deposits_select_own" on public.account_deposits
-  for select using (auth.uid() = owner);
-create policy "deposits_insert_own" on public.account_deposits
-  for insert with check (auth.uid() = owner);
-create policy "deposits_update_own" on public.account_deposits
-  for update using (auth.uid() = owner) with check (auth.uid() = owner);
-create policy "deposits_delete_own" on public.account_deposits
-  for delete using (auth.uid() = owner);
-
--- tax_limits (공개 참조 데이터)
-create policy "tax_limits_select_all" on public.tax_limits
-  for select using (true);
 
 -- ─────────────────────────────────────────────
 -- 신규 가입 시 기본 tax_config 1행 자동 생성

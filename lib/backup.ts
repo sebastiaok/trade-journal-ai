@@ -16,6 +16,19 @@ export interface BackupFile {
   checks: InvestCheck[];
 }
 
+/** 복원 모드: merge(병합) 또는 overwrite(덮어쓰기) */
+export type RestoreMode = 'merge' | 'overwrite';
+
+/** 백업 파일 미리보기 정보 */
+export interface BackupPreview {
+  valid: boolean;
+  exportedAt: string;
+  accountCount: number;
+  tradeCount: number;
+  checkCount: number;
+  accountNames: string[];
+}
+
 /* ───────── 내보내기 ───────── */
 
 export async function buildBackup(): Promise<BackupFile> {
@@ -49,13 +62,7 @@ export async function downloadBackup(): Promise<void> {
   URL.revokeObjectURL(url);
 }
 
-/* ───────── 가져오기 ───────── */
-
-export interface ImportResult {
-  accounts: number;
-  trades: number;
-  checks: number;
-}
+/* ───────── 미리보기 ───────── */
 
 function validate(obj: unknown): asserts obj is BackupFile {
   if (!obj || typeof obj !== 'object') throw new Error('백업 파일 형식이 아닙니다.');
@@ -67,8 +74,30 @@ function validate(obj: unknown): asserts obj is BackupFile {
     throw new Error('지원하지 않는 백업 버전입니다. 앱을 업데이트하세요.');
 }
 
+/** 파일 내용을 파싱해 미리보기 정보를 반환한다 (실제 저장은 하지 않음). */
+export function previewBackup(text: string): BackupPreview {
+  const parsed: unknown = JSON.parse(text);
+  validate(parsed);
+  return {
+    valid: true,
+    exportedAt: parsed.exportedAt,
+    accountCount: parsed.accounts.length,
+    tradeCount: parsed.trades.length,
+    checkCount: parsed.checks.length,
+    accountNames: parsed.accounts.map((a: Account) => a.name),
+  };
+}
+
+/* ───────── 가져오기 (merge) ───────── */
+
+export interface ImportResult {
+  accounts: number;
+  trades: number;
+  checks: number;
+}
+
 /**
- * 백업 JSON을 현재 계정으로 가져온다.
+ * 백업 JSON을 현재 계정으로 가져온다 (병합 모드).
  * - 파일 내 옛 id는 새 id로 매핑(계좌→거래/검토 참조 유지).
  * - 기존 데이터는 지우지 않고 추가(merge). 중복 방지는 호출 측에서 결정.
  */
@@ -82,6 +111,7 @@ export async function importBackup(text: string): Promise<ImportResult> {
   for (const a of backup.accounts) {
     const created = await accountsRepo.add({
       name: a.name, type: a.type, broker: a.broker, openedAt: a.openedAt, note: a.note,
+      cashBalance: a.cashBalance ?? 0,
     });
     accountIdMap.set(a.id, created.id);
   }
@@ -114,8 +144,29 @@ export async function importBackup(text: string): Promise<ImportResult> {
   };
 }
 
+/* ───────── 덮어쓰기 복원 ───────── */
+
+/**
+ * 기존 데이터를 모두 삭제 후 백업을 복원한다 (overwrite 모드).
+ * ⚠️ 파괴적 작업 — 호출 전 사용자 확인 필수.
+ */
+export async function restoreBackup(text: string): Promise<ImportResult> {
+  const parsed: unknown = JSON.parse(text);
+  validate(parsed);
+
+  // 기존 데이터 삭제: 거래/검토 → 계좌 순서 (FK 의존)
+  const existing = await accountsRepo.list();
+  for (const a of existing) {
+    await accountsRepo.remove(a.id); // cascade로 trades/checks도 삭제
+  }
+
+  // 이제 병합 로직으로 삽입 (빈 DB에 삽입하므로 결과적으로 overwrite)
+  return importBackup(text);
+}
+
 /** 파일 input에서 호출 */
-export async function importBackupFromFile(file: File): Promise<ImportResult> {
+export async function importBackupFromFile(file: File, mode: RestoreMode = 'merge'): Promise<ImportResult> {
   const text = await file.text();
+  if (mode === 'overwrite') return restoreBackup(text);
   return importBackup(text);
 }

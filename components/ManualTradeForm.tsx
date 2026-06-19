@@ -19,8 +19,8 @@ interface Props {
   accounts: Account[];
   /** 상단에서 고른 계좌 (없으면 첫 계좌 기본) */
   defaultAccountId?: string;
-  /** 저장 시 부모가 id 부여 후 영속 */
-  onSubmit: (trade: Omit<Trade, 'id'>) => void;
+  /** 저장 시 부모가 id 부여 후 영속. 비동기 가능 (에러 시 reject) */
+  onSubmit: (trade: Omit<Trade, 'id'>) => Promise<void> | void;
 }
 
 const SIDES: { value: Side; label: string }[] = [
@@ -69,7 +69,9 @@ export default function ManualTradeForm({ accounts, defaultAccountId, onSubmit }
     });
   }
 
-  function handleSubmit() {
+  const [saving, setSaving] = useState(false);
+
+  async function handleSubmit() {
     setError(null);
 
     if (!form.accountId) return setError('계좌를 선택하세요.');
@@ -81,17 +83,23 @@ export default function ManualTradeForm({ accounts, defaultAccountId, onSubmit }
       return setError('매매 사유를 입력하세요. (복기에 꼭 필요합니다)');
 
     const amount = cash ? form.amount : form.price * form.quantity;
-    onSubmit({
-      ...form,
-      symbol: cash && !form.symbol.trim() ? '현금' : form.symbol.trim(),
-      amount,
-      source: 'manual',
-      confidence: 1,
-      executedAt: new Date(form.executedAt).toISOString(),
-    });
-
-    // 사유/태그는 비우되 계좌·구분은 유지해 연속 입력 편하게
-    setForm({ ...emptyTrade(form.accountId), side: form.side });
+    setSaving(true);
+    try {
+      await onSubmit({
+        ...form,
+        symbol: cash && !form.symbol.trim() ? '현금' : form.symbol.trim(),
+        amount,
+        source: 'manual',
+        confidence: 1,
+        executedAt: new Date(form.executedAt).toISOString(),
+      });
+      // 사유/태그는 비우되 계좌·구분은 유지해 연속 입력 편하게
+      setForm({ ...emptyTrade(form.accountId), side: form.side });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '거래 저장에 실패했습니다.');
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -289,8 +297,8 @@ export default function ManualTradeForm({ accounts, defaultAccountId, onSubmit }
       {error && <p className="mtf-error" role="alert">{error}</p>}
 
       <div className="mtf-actions">
-        <button type="submit" className="mtf-submit">
-          거래 저장
+        <button type="submit" className="mtf-submit" disabled={saving}>
+          {saving ? '저장 중…' : '거래 저장'}
         </button>
       </div>
     </form>

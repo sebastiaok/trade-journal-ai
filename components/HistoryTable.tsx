@@ -1,6 +1,7 @@
 // components/HistoryTable.tsx
 // 매매내역(history) 탭 — 저장된 거래를 읽기 전용으로 조회.
-// 계좌/종목/기간/구분 필터 + 컬럼 정렬. 편집은 매매일지 탭에서 한다.
+// 계좌/종목/기간/구분 복합 필터 + 컬럼 정렬.
+// source='opening' 행은 "초기 보유" 배지로 구분.
 
 'use client';
 
@@ -16,6 +17,7 @@ interface Props {
 
 type SortKey = 'executedAt' | 'symbol' | 'amount' | 'realizedPnl';
 type SortDir = 'asc' | 'desc';
+type SideFilter = Side | 'all' | 'buy_sell';
 
 const SIDE_LABEL: Record<Side, string> = {
   buy: '매수',
@@ -35,7 +37,7 @@ const signedWon = (n: number | undefined) => {
 
 export default function HistoryTable({ trades, accounts, accountId }: Props) {
   const [symbol, setSymbol] = useState('');
-  const [sideFilter, setSideFilter] = useState<Side | 'all'>('all');
+  const [sideFilter, setSideFilter] = useState<SideFilter>('all');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [sortKey, setSortKey] = useState<SortKey>('executedAt');
@@ -58,7 +60,11 @@ export default function HistoryTable({ trades, accounts, accountId }: Props) {
           (t.code ?? '').toLowerCase().includes(q),
       );
     }
-    if (sideFilter !== 'all') r = r.filter((t) => t.side === sideFilter);
+    if (sideFilter === 'buy_sell') {
+      r = r.filter((t) => t.side === 'buy' || t.side === 'sell');
+    } else if (sideFilter !== 'all') {
+      r = r.filter((t) => t.side === sideFilter);
+    }
     if (from) r = r.filter((t) => t.executedAt.slice(0, 10) >= from);
     if (to) r = r.filter((t) => t.executedAt.slice(0, 10) <= to);
 
@@ -91,7 +97,12 @@ export default function HistoryTable({ trades, accounts, accountId }: Props) {
 
   const totals = useMemo(() => {
     const realized = rows.reduce((s, t) => s + (t.realizedPnl ?? 0), 0);
-    return { count: rows.length, realized };
+    const feeSum = rows.reduce((s, t) => s + (t.fee ?? 0), 0);
+    const taxSum = rows.reduce((s, t) => s + (t.tax ?? 0), 0);
+    const sells = rows.filter((t) => t.side === 'sell' && t.realizedPnl != null);
+    const wins = sells.filter((t) => (t.realizedPnl ?? 0) > 0);
+    const winRate = sells.length > 0 ? Math.round((wins.length / sells.length) * 100) : 0;
+    return { count: rows.length, realized, feeSum, taxSum, winRate, sellCount: sells.length };
   }, [rows]);
 
   function toggleSort(key: SortKey) {
@@ -126,10 +137,11 @@ export default function HistoryTable({ trades, accounts, accountId }: Props) {
         <select
           className="hf-input"
           value={sideFilter}
-          onChange={(e) => setSideFilter(e.target.value as Side | 'all')}
+          onChange={(e) => setSideFilter(e.target.value as SideFilter)}
           aria-label="구분 필터"
         >
           <option value="all">전체 구분</option>
+          <option value="buy_sell">매수/매도만</option>
           <option value="buy">매수</option>
           <option value="sell">매도</option>
           <option value="deposit">납입</option>
@@ -148,11 +160,21 @@ export default function HistoryTable({ trades, accounts, accountId }: Props) {
         </button>
       </div>
 
-      <div className="history-summary">
-        <span>{totals.count}건</span>
-        <span className={totals.realized > 0 ? 'pnl-up' : totals.realized < 0 ? 'pnl-down' : ''}>
-          실현손익 {signedWon(totals.realized)}
-        </span>
+      {/* 요약 카드 */}
+      <div className="history-summary-cards">
+        <div className="history-summary">
+          <span>{totals.count}건</span>
+          <span className={totals.realized > 0 ? 'pnl-up' : totals.realized < 0 ? 'pnl-down' : ''}>
+            실현손익 {signedWon(totals.realized)}
+          </span>
+        </div>
+        {totals.sellCount > 0 && (
+          <div className="history-summary">
+            <span>승률 {totals.winRate}%</span>
+            <span className="muted">수수료 {won(totals.feeSum)}</span>
+            <span className="muted">세금 {won(totals.taxSum)}</span>
+          </div>
+        )}
       </div>
 
       {rows.length === 0 ? (
@@ -185,8 +207,9 @@ export default function HistoryTable({ trades, accounts, accountId }: Props) {
             </thead>
             <tbody>
               {rows.map((t) => {
-                const isTrade = t.side === 'buy' || t.side === 'sell';
+                const isBuySell = t.side === 'buy' || t.side === 'sell';
                 const pnl = t.realizedPnl;
+                const isOpening = t.source === 'opening';
                 return (
                   <tr key={t.id}>
                     <td className="mono">{t.executedAt.slice(0, 16).replace('T', ' ')}</td>
@@ -197,9 +220,10 @@ export default function HistoryTable({ trades, accounts, accountId }: Props) {
                     <td className="acct">{accountName.get(t.accountId) ?? '—'}</td>
                     <td>
                       <span className={`side side-${t.side}`}>{SIDE_LABEL[t.side]}</span>
+                      {isOpening && <span className="side side-opening">초기 보유</span>}
                     </td>
-                    <td className="num mono">{isTrade ? won(t.price) : '—'}</td>
-                    <td className="num mono">{isTrade ? t.quantity.toLocaleString('ko-KR') : '—'}</td>
+                    <td className="num mono">{isBuySell ? won(t.price) : '—'}</td>
+                    <td className="num mono">{isBuySell ? t.quantity.toLocaleString('ko-KR') : '—'}</td>
                     <td className="num mono">{won(t.amount)}</td>
                     <td className={`num mono ${pnl != null && pnl > 0 ? 'pnl-up' : pnl != null && pnl < 0 ? 'pnl-down' : ''}`}>
                       {t.side === 'sell' ? signedWon(pnl) : '—'}
