@@ -259,11 +259,52 @@ async function uid(): Promise<string> {
   return data.user.id;
 }
 
+/* ───────── Local → 정규화 (기존 데이터 호환) ───────── */
+
+/** localStorage의 Account 행에서 누락된 숫자 필드를 0으로 보정 */
+function normalizeAccount(a: Account): Account {
+  return { ...a, cashBalance: Number(a.cashBalance) || 0 };
+}
+
+/** localStorage의 Trade 행에서 누락된 숫자 필드를 0으로 보정 */
+function normalizeTrade(t: Trade): Trade {
+  return {
+    ...t,
+    price: Number(t.price) || 0,
+    quantity: Number(t.quantity) || 0,
+    amount: Number(t.amount) || 0,
+    fee: Number(t.fee) || 0,
+    tax: Number(t.tax) || 0,
+  };
+}
+
+/** localStorage의 Holding 행에서 누락된 숫자 필드를 0으로 보정 */
+function normalizeHolding(h: Holding): Holding {
+  return {
+    ...h,
+    quantity: Number(h.quantity) || 0,
+    avgCost: Number(h.avgCost) || 0,
+  };
+}
+
+/** localStorage의 RealizedPnlRow에서 누락된 숫자 필드를 0으로 보정 */
+function normalizeRealizedPnl(r: RealizedPnlRow): RealizedPnlRow {
+  return {
+    ...r,
+    matchedQty: Number(r.matchedQty) || 0,
+    buyPrice: Number(r.buyPrice) || 0,
+    sellPrice: Number(r.sellPrice) || 0,
+    pnlAmount: Number(r.pnlAmount) || 0,
+    feeAmount: Number(r.feeAmount) || 0,
+    taxAmount: Number(r.taxAmount) || 0,
+  };
+}
+
 /* ───────── Accounts ───────── */
 
 export const accountsRepo = {
   async list(): Promise<Account[]> {
-    if (useLocalRepo()) return readLocal<Account>(LOCAL_KEYS.accounts);
+    if (useLocalRepo()) return readLocal<Account>(LOCAL_KEYS.accounts).map(normalizeAccount);
     const { data, error } = await supabase.from('accounts').select('*').order('created_at');
     if (error) throw error;
     return (data as AccountRow[]).map(toAccount);
@@ -316,6 +357,7 @@ export const tradesRepo = {
   async list(): Promise<Trade[]> {
     if (useLocalRepo()) {
       return readLocal<Trade>(LOCAL_KEYS.trades)
+        .map(normalizeTrade)
         .sort((a, b) => b.executedAt.localeCompare(a.executedAt));
     }
     const { data, error } = await supabase
@@ -554,7 +596,7 @@ export const taxLimitsRepo = {
 export const holdingsRepo = {
   async list(accountId?: string): Promise<Holding[]> {
     if (useLocalRepo()) {
-      const all = readLocal<Holding>(LOCAL_KEYS.holdings);
+      const all = readLocal<Holding>(LOCAL_KEYS.holdings).map(normalizeHolding);
       return accountId ? all.filter((h) => h.accountId === accountId) : all;
     }
     let q = supabase.from('holdings').select('*').order('symbol');
@@ -581,7 +623,7 @@ export const holdingsRepo = {
 export const realizedPnlRepo = {
   async list(accountId?: string): Promise<RealizedPnlRow[]> {
     if (useLocalRepo()) {
-      const all = readLocal<RealizedPnlRow>(LOCAL_KEYS.realizedPnl);
+      const all = readLocal<RealizedPnlRow>(LOCAL_KEYS.realizedPnl).map(normalizeRealizedPnl);
       return accountId ? all.filter((r) => r.accountId === accountId) : all;
     }
     let q = supabase.from('realized_pnl').select('*').order('realized_at', { ascending: false });

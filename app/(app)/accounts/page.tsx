@@ -3,11 +3,43 @@
 
 'use client';
 
+import { Component, type ErrorInfo, type ReactNode } from 'react';
 import Link from 'next/link';
 import { useAppData } from '../../../components/DataProvider';
 import AccountManager from '../../../components/AccountManager';
 
+class AccountsErrorBoundary extends Component<
+  { children: ReactNode },
+  { error: Error | null }
+> {
+  state = { error: null as Error | null };
+  static getDerivedStateFromError(error: Error) { return { error }; }
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.error('AccountsPage error:', error, info);
+  }
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="accounts-page">
+          <p className="dash-error" role="alert">
+            계좌 관리 렌더링 오류: {this.state.error.message}
+          </p>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 export default function AccountsPage() {
+  return (
+    <AccountsErrorBoundary>
+      <AccountsContent />
+    </AccountsErrorBoundary>
+  );
+}
+
+function AccountsContent() {
   const data = useAppData();
 
   return (
@@ -16,6 +48,8 @@ export default function AccountsPage() {
         <h1 className="accounts-page-title">계좌 관리</h1>
         <Link href="/settings/data" className="tool-btn">데이터 관리</Link>
       </header>
+
+      {data.error && <p className="dash-error" role="alert">{data.error}</p>}
 
       <AccountManager
         accounts={data.accounts}
