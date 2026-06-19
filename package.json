@@ -1,0 +1,22 @@
+{
+  "name": "trade-journal-ai",
+  "version": "0.1.0",
+  "private": true,
+  "description": "이미지 인식 기반 매매일지 복기 에이전트",
+  "scripts": {
+    "dev": "next dev --turbopack",
+    "build": "next build",
+    "start": "next start"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.108.1",
+    "@types/node": "^25.9.1",
+    "@types/react": "^19.2.16",
+    "@types/react-dom": "^19.2.3",
+    "next": "^16.2.7",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "typescript": "^6.0.3",
+    "xlsx": "^0.18.5"
+  }
+}
