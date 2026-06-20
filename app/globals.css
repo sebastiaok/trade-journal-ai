@@ -1096,6 +1096,94 @@ button { font-family: inherit; }
   line-height: 1.5;
 }
 
+/* ───────── 증권사 연동 (BrokerSettings) ───────── */
+.broker-card {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
+  background: var(--surface);
+}
+.broker-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.broker-card-account {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.broker-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+  margin-left: 8px;
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  color: var(--accent);
+}
+.broker-badge-real {
+  background: color-mix(in srgb, var(--profit) 15%, transparent);
+  color: var(--profit);
+}
+.broker-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.broker-card-meta {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+}
+.broker-link-btn {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+}
+.broker-link-btn:hover { opacity: 0.8; }
+.broker-link-danger { color: var(--loss); }
+.broker-type-switch {
+  margin-top: 10px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-2);
+  font-size: 14px;
+}
+.broker-type-switch p { margin: 0 0 10px; }
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.form-label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+.form-input {
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 14px;
+}
+
 /* ───────── 반응형: 축소 사이드바 (태블릿) ───────── */
 @media (max-width: 1023px) and (min-width: 768px) {
   .sidebar {

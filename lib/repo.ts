@@ -5,7 +5,7 @@
 
 import { isImplementationMode } from './devMode';
 import { isSupabaseConfigured, supabase } from './supabase';
-import type { Account, Trade, InvestCheck, ReviewNote, AccountType, Side, Source, AccountDeposit, TaxLimit, Holding, RealizedPnlRow, AnalysisNote, AnalysisStatus, PortfolioSnapshot, SnapshotDetail, TargetAllocation, Ticker, PriceCache } from '../data/types';
+import type { Account, Trade, InvestCheck, ReviewNote, AccountType, Side, Source, AccountDeposit, TaxLimit, Holding, RealizedPnlRow, AnalysisNote, AnalysisStatus, PortfolioSnapshot, SnapshotDetail, TargetAllocation, Ticker, PriceCache, BrokerCredential, BrokerTokenCache } from '../data/types';
 
 const LOCAL_KEYS = {
   accounts: 'tja-dev-accounts',
@@ -1077,3 +1077,105 @@ function saveTradeLocal(t: Omit<Trade, 'id'>): Trade {
 
   return created;
 }
+
+/* ───────── BrokerCredentials (증권사 연동 자격) ───────── */
+
+interface BrokerCredentialRow {
+  id: string; owner: string; account_id: string; broker: 'kis' | 'kiwoom';
+  app_key_enc: string; app_secret_enc: string; account_no_enc: string | null;
+  extra: Record<string, string> | null; account_type: 'REAL' | 'VIRTUAL';
+  created_at: string;
+}
+
+const toBrokerCredential = (r: BrokerCredentialRow): BrokerCredential => ({
+  id: r.id, accountId: r.account_id, broker: r.broker,
+  appKeyEnc: r.app_key_enc, appSecretEnc: r.app_secret_enc,
+  accountNoEnc: r.account_no_enc ?? undefined,
+  extra: r.extra ?? undefined,
+  accountType: r.account_type, createdAt: r.created_at,
+});
+
+export const brokerCredentialsRepo = {
+  async list(): Promise<BrokerCredential[]> {
+    if (useLocalRepo()) return [];
+    const { data, error } = await supabase
+      .from('broker_credentials').select('*').order('created_at');
+    if (error) throw error;
+    return (data as BrokerCredentialRow[]).map(toBrokerCredential);
+  },
+  async add(c: {
+    accountId: string;
+    broker: 'kis' | 'kiwoom';
+    appKeyEnc: string;
+    appSecretEnc: string;
+    accountNoEnc?: string;
+    extra?: Record<string, string>;
+    accountType: 'REAL' | 'VIRTUAL';
+  }): Promise<BrokerCredential> {
+    const owner = await uid();
+    const { data, error } = await supabase
+      .from('broker_credentials')
+      .insert({
+        owner,
+        account_id: c.accountId,
+        broker: c.broker,
+        app_key_enc: c.appKeyEnc,
+        app_secret_enc: c.appSecretEnc,
+        account_no_enc: c.accountNoEnc ?? null,
+        extra: c.extra ?? {},
+        account_type: c.accountType,
+      })
+      .select()
+      .single();
+    if (error) throw error;
+    return toBrokerCredential(data as BrokerCredentialRow);
+  },
+  async update(id: string, patch: Partial<{
+    appKeyEnc: string;
+    appSecretEnc: string;
+    accountNoEnc: string;
+    extra: Record<string, string>;
+    accountType: 'REAL' | 'VIRTUAL';
+  }>): Promise<void> {
+    const row: Record<string, unknown> = {};
+    if (patch.appKeyEnc !== undefined) row.app_key_enc = patch.appKeyEnc;
+    if (patch.appSecretEnc !== undefined) row.app_secret_enc = patch.appSecretEnc;
+    if (patch.accountNoEnc !== undefined) row.account_no_enc = patch.accountNoEnc;
+    if (patch.extra !== undefined) row.extra = patch.extra;
+    if (patch.accountType !== undefined) row.account_type = patch.accountType;
+    const { error } = await supabase.from('broker_credentials').update(row).eq('id', id);
+    if (error) throw error;
+  },
+  async remove(id: string): Promise<void> {
+    const { error } = await supabase.from('broker_credentials').delete().eq('id', id);
+    if (error) throw error;
+  },
+};
+
+/* ───────── BrokerTokenCache (토큰 캐시) ───────── */
+
+interface BrokerTokenCacheRow {
+  id: string; owner: string; cred_id: string;
+  access_token_enc: string; expires_at: string; created_at: string;
+}
+
+const toBrokerTokenCache = (r: BrokerTokenCacheRow): BrokerTokenCache => ({
+  id: r.id, credId: r.cred_id,
+  accessTokenEnc: r.access_token_enc,
+  expiresAt: r.expires_at, createdAt: r.created_at,
+});
+
+export const brokerTokenCacheRepo = {
+  async get(credId: string): Promise<BrokerTokenCache | null> {
+    if (useLocalRepo()) return null;
+    const { data, error } = await supabase
+      .from('broker_token_cache').select('*').eq('cred_id', credId).maybeSingle();
+    if (error) throw error;
+    return data ? toBrokerTokenCache(data as BrokerTokenCacheRow) : null;
+  },
+  async remove(credId: string): Promise<void> {
+    const { error } = await supabase
+      .from('broker_token_cache').delete().eq('cred_id', credId);
+    if (error) throw error;
+  },
+};

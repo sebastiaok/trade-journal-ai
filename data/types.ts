@@ -258,6 +258,32 @@ export const DEFAULT_TAX_CONFIG: TaxConfig = {
   earlyWithdrawalTaxRate: 0.165,
 };
 
+/* ───────── 증권사 API 연동 (Phase 7) ───────── */
+
+export type BrokerType = 'kis' | 'kiwoom';
+
+/** 증권사 자격 정보 (암호화 저장) */
+export interface BrokerCredential {
+  id: string;
+  accountId: string;
+  broker: BrokerType;
+  appKeyEnc: string;
+  appSecretEnc: string;
+  accountNoEnc?: string;
+  extra?: Record<string, string>;
+  accountType: 'REAL' | 'VIRTUAL';
+  createdAt: string;
+}
+
+/** 증권사 토큰 캐시 (암호화 저장) */
+export interface BrokerTokenCache {
+  id: string;
+  credId: string;
+  accessTokenEnc: string;
+  expiresAt: string;
+  createdAt: string;
+}
+
 /** 수기 입력 폼 기본값 헬퍼 */
 export function emptyTrade(accountId: string): Omit<Trade, 'id'> {
   return {
