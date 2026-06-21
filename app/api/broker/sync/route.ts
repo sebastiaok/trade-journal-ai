@@ -65,7 +65,7 @@ export async function POST(req: Request) {
 
     // 잔고 동기화
     if (body.syncType === 'balance' || body.syncType === 'all') {
-      // 디버그: 키움 잔고 raw 응답
+      // 디버그: qry_tp 여러 값 시도
       if (cred.broker === 'kiwoom') {
         try {
           const { decrypt: dec } = await import('../../../../lib/crypto');
@@ -74,24 +74,28 @@ export async function POST(req: Request) {
           const acctNo = credential.accountNoEnc ? dec(credential.accountNoEnc) : '';
           const acctType = credential.accountType || 'VIRTUAL';
           const bUrl = acctType === 'REAL' ? 'https://api.kiwoom.com' : 'https://mockapi.kiwoom.com';
-          const dRes = await fetch(`${bUrl}/api/dostk/acnt`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json;charset=UTF-8',
-              authorization: `Bearer ${tok}`,
-              'api-id': 'ka10076',
-              'cont-yn': 'N',
-              'next-key': '',
-            },
-            body: JSON.stringify({
-              acnt_no: acctNo,
-              pwd: credential.extra?.pwd || '',
-              qry_tp: '1',
-              sell_tp: '0',
-              stex_tp: '0',
-            }),
-          });
-          result._debug = { balanceRaw: (await dRes.text()).slice(0, 4000) };
+          const results: Record<string, string> = {};
+          for (const qtp of ['0', '1', '2', '3']) {
+            const dRes = await fetch(`${bUrl}/api/dostk/acnt`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json;charset=UTF-8',
+                authorization: `Bearer ${tok}`,
+                'api-id': 'ka10076',
+                'cont-yn': 'N',
+                'next-key': '',
+              },
+              body: JSON.stringify({
+                acnt_no: acctNo,
+                pwd: credential.extra?.pwd || '',
+                qry_tp: qtp,
+                sell_tp: '0',
+                stex_tp: '0',
+              }),
+            });
+            results[`qry_tp_${qtp}`] = (await dRes.text()).slice(0, 800);
+          }
+          result._debug = results;
         } catch (de) {
           result._debug = { debugErr: de instanceof Error ? de.message : String(de) };
         }
