@@ -101,6 +101,7 @@ export async function POST(req: Request) {
             acnt_no: accountNo2,
             pwd: credential.extra?.pwd || '',
             qry_tp: '1',
+            sell_tp: '0',
           }),
         });
         const debugText = await debugRes.text();
