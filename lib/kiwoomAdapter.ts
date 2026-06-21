@@ -99,7 +99,7 @@ export class KiwoomAdapter implements BrokerAdapter {
         'next-key': nextKey,
       };
 
-      const res = await fetchWithRetry(`${base}/api/dostk/acntbal`, {
+      const res = await fetchWithRetry(`${base}/api/dostk/acnt`, {
         method: 'POST',
         headers,
         body: JSON.stringify({

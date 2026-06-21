@@ -74,7 +74,7 @@ export async function POST(req: Request) {
         const baseUrl = accountType2 === 'REAL' ? 'https://api.kiwoom.com' : 'https://mockapi.kiwoom.com';
 
         // api-id 헤더 사용 (키움 REST API 공식 스펙)
-        const debugRes = await fetch(`${baseUrl}/api/dostk/acntbal`, {
+        const debugRes = await fetch(`${baseUrl}/api/dostk/acnt`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json;charset=UTF-8',
@@ -92,7 +92,7 @@ export async function POST(req: Request) {
         const debugText = await debugRes.text();
         result._debug = {
           status: debugRes.status,
-          url: `${baseUrl}/api/dostk/acntbal`,
+          url: `${baseUrl}/api/dostk/acnt`,
           accountNo: accountNo2 ? `${accountNo2.slice(0, 4)}****` : '(empty)',
           accountType: accountType2,
           responseBody: debugText.slice(0, 4000),
