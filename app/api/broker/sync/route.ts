@@ -65,14 +65,39 @@ export async function POST(req: Request) {
 
     // 잔고 동기화
     if (body.syncType === 'balance' || body.syncType === 'all') {
-      // 디버그: getBalance 원시 응답도 전달
-      const token2 = await ensureToken(adapter, credential, userId);
-      const accountNo2 = credential.accountNoEnc ? (await import('../../../../lib/crypto')).decrypt(credential.accountNoEnc) : '';
-      const appKey2 = (await import('../../../../lib/crypto')).decrypt(credential.appKeyEnc);
-      const appSecret2 = (await import('../../../../lib/crypto')).decrypt(credential.appSecretEnc);
-      const extra2 = { ...credential.extra, accountType: credential.accountType, appKey: appKey2, appSecret: appSecret2 };
-      const rawBalance = await adapter.getBalance(token2, accountNo2, extra2);
-      result._debug = { rawKeys: rawBalance._debug ? Object.keys(rawBalance._debug as object) : null, rawSample: rawBalance._debug ? JSON.stringify(rawBalance._debug).slice(0, 3000) : null, parsedHoldings: rawBalance.holdings.length, parsedCash: rawBalance.cash };
+      // 디버그: 키움 API raw fetch로 실제 응답 구조 확인
+      try {
+        const { decrypt: dec } = await import('../../../../lib/crypto');
+        const token2 = await ensureToken(adapter, credential, userId);
+        const accountNo2 = credential.accountNoEnc ? dec(credential.accountNoEnc) : '';
+        const accountType2 = credential.accountType || 'VIRTUAL';
+        const baseUrl = accountType2 === 'REAL' ? 'https://api.kiwoom.com' : 'https://mockapi.kiwoom.com';
+
+        const debugRes = await fetch(`${baseUrl}/api/dostk/acntbal`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            authorization: `Bearer ${token2}`,
+            cont_yn: 'N',
+            next_key: '',
+          },
+          body: JSON.stringify({
+            acnt_no: accountNo2,
+            pwd: credential.extra?.pwd || '',
+            inqr_dvsn: '1',
+          }),
+        });
+        const debugText = await debugRes.text();
+        result._debug = {
+          status: debugRes.status,
+          url: `${baseUrl}/api/dostk/acntbal`,
+          accountNo: accountNo2 ? `${accountNo2.slice(0, 4)}****` : '(empty)',
+          accountType: accountType2,
+          responseBody: debugText.slice(0, 4000),
+        };
+      } catch (debugErr) {
+        result._debug = { debugError: debugErr instanceof Error ? debugErr.message : String(debugErr) };
+      }
 
       const balResult = await syncBalance(adapter, credential, userId);
       result.syncedHoldings = balResult.syncedHoldings;
