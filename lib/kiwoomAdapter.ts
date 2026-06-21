@@ -88,6 +88,7 @@ export class KiwoomAdapter implements BrokerAdapter {
     let cash = 0;
     let contYn = 'N';
     let nextKey = '';
+    let debugRaw: unknown = null;
 
     do {
       const headers: Record<string, string> = {
@@ -112,44 +113,44 @@ export class KiwoomAdapter implements BrokerAdapter {
         throw new Error(`키움 잔고 조회 실패 (${res.status}): ${text}`);
       }
 
-      const json = await res.json() as {
-        acnt_bal?: Array<{
-          stk_cd: string;     // 종목코드
-          stk_nm: string;     // 종목명
-          hldg_qty: string;   // 보유수량
-          avg_buy_prc: string; // 평균매입가
-          cur_prc: string;    // 현재가
-        }>;
-        deposits?: string;
-        eval_amt?: string;
-        cont_yn?: string;
-        next_key?: string;
-      };
+      const json = await res.json() as Record<string, unknown>;
 
-      if (json.deposits) {
-        cash = Number(json.deposits);
+      // 디버그: 실제 응답 구조를 _debug에 저장 (최초 페이지만)
+      if (contYn === 'N') {
+        debugRaw = json;
+        console.log('[kiwoom:getBalance] response keys:', Object.keys(json));
+        console.log('[kiwoom:getBalance] sample:', JSON.stringify(json).slice(0, 1000));
       }
 
-      if (json.acnt_bal) {
-        for (const item of json.acnt_bal) {
-          if (Number(item.hldg_qty) > 0) {
+      // 예수금: 여러 필드명 대응
+      const depositVal = json.deposits ?? json.dnca_tot_amt ?? json.dps_amt ?? json.d2_dps ?? 0;
+      if (depositVal) {
+        cash = Number(depositVal);
+      }
+
+      // 보유종목: 여러 배열 키 대응
+      const holdingsArr = (json.acnt_bal ?? json.output1 ?? json.stk_list ?? json.output ?? []) as Array<Record<string, string>>;
+      if (Array.isArray(holdingsArr)) {
+        for (const item of holdingsArr) {
+          const qty = Number(item.hldg_qty ?? item.hold_qty ?? item.qty ?? item.balan_qty ?? 0);
+          if (qty > 0) {
             allHoldings.push({
-              symbol: item.stk_nm,
-              name: item.stk_nm,
-              code: item.stk_cd,
-              quantity: Number(item.hldg_qty),
-              avgCost: Math.round(Number(item.avg_buy_prc)),
-              currentPrice: Number(item.cur_prc) || undefined,
+              symbol: item.stk_nm ?? item.prdt_name ?? item.name ?? '',
+              name: item.stk_nm ?? item.prdt_name ?? item.name ?? '',
+              code: item.stk_cd ?? item.pdno ?? item.code ?? '',
+              quantity: qty,
+              avgCost: Math.round(Number(item.avg_buy_prc ?? item.pchs_avg_pric ?? item.avg_prc ?? 0)),
+              currentPrice: Number(item.cur_prc ?? item.prpr ?? item.now_pric ?? 0) || undefined,
             });
           }
         }
       }
 
-      contYn = json.cont_yn === 'Y' ? 'Y' : 'N';
-      nextKey = json.next_key || '';
+      contYn = (json.cont_yn ?? json.tr_cont ?? '') === 'Y' ? 'Y' : 'N';
+      nextKey = (json.next_key ?? json.ctx_area_nk ?? '') as string;
     } while (contYn === 'Y');
 
-    return { cash, holdings: allHoldings };
+    return { cash, holdings: allHoldings, _debug: debugRaw };
   }
 
   async getExecutions(
@@ -192,30 +193,23 @@ export class KiwoomAdapter implements BrokerAdapter {
         throw new Error(`키움 체결 조회 실패 (${res.status}): ${text}`);
       }
 
-      const json = await res.json() as {
-        ccnl_list?: Array<{
-          stk_cd: string;       // 종목코드
-          stk_nm: string;       // 종목명
-          buy_sell_tp: string;  // 1: 매도, 2: 매수
-          ccnl_qty: string;     // 체결수량
-          ccnl_prc: string;     // 체결가
-          ccnl_amt: string;     // 체결금액
-          fee: string;          // 수수료
-          tax: string;          // 세금
-          ccnl_dt: string;      // 체결일 (YYYYMMDD)
-          ccnl_tm: string;      // 체결시각 (HHMMSS)
-          ord_no: string;       // 주문번호
-        }>;
-        cont_yn?: string;
-        next_key?: string;
-      };
+      const json = await res.json() as Record<string, unknown>;
 
-      if (json.ccnl_list) {
-        for (const item of json.ccnl_list) {
-          if (Number(item.ccnl_qty) <= 0) continue;
-          const isSell = item.buy_sell_tp === '1';
-          const dateStr = item.ccnl_dt || endDt;
-          const timeStr = item.ccnl_tm || '000000';
+      // 디버그: 실제 응답 구조 로깅
+      if (contYn === 'N') {
+        console.log('[kiwoom:getExecutions] response keys:', Object.keys(json));
+        console.log('[kiwoom:getExecutions] sample:', JSON.stringify(json).slice(0, 1000));
+      }
+
+      const execArr = (json.ccnl_list ?? json.output1 ?? json.output ?? []) as Array<Record<string, string>>;
+      if (Array.isArray(execArr)) {
+        for (const item of execArr) {
+          const qty = Number(item.ccnl_qty ?? item.tot_ccld_qty ?? item.qty ?? 0);
+          if (qty <= 0) continue;
+          const sideRaw = item.buy_sell_tp ?? item.sll_buy_dvsn_cd ?? item.side ?? '';
+          const isSell = sideRaw === '1' || sideRaw === '01';
+          const dateStr = item.ccnl_dt ?? item.ord_dt ?? item.stck_bsop_date ?? endDt;
+          const timeStr = item.ccnl_tm ?? item.ord_tmd ?? '000000';
           const y = dateStr.slice(0, 4);
           const m = dateStr.slice(4, 6);
           const d = dateStr.slice(6, 8);
@@ -223,21 +217,21 @@ export class KiwoomAdapter implements BrokerAdapter {
           const mm = timeStr.slice(2, 4);
 
           allExecutions.push({
-            symbol: item.stk_nm,
-            code: item.stk_cd,
+            symbol: item.stk_nm ?? item.prdt_name ?? '',
+            code: item.stk_cd ?? item.pdno ?? '',
             side: isSell ? 'sell' : 'buy',
-            quantity: Number(item.ccnl_qty),
-            price: Math.round(Number(item.ccnl_prc)),
-            fee: Number(item.fee) || 0,
-            tax: Number(item.tax) || 0,
+            quantity: qty,
+            price: Math.round(Number(item.ccnl_prc ?? item.avg_prvs ?? item.pchs_avg_pric ?? 0)),
+            fee: Number(item.fee ?? item.tot_fee ?? 0) || 0,
+            tax: Number(item.tax ?? item.tot_tax ?? 0) || 0,
             executedAt: `${y}-${m}-${d}T${hh}:${mm}:00`,
-            orderNo: item.ord_no,
+            orderNo: item.ord_no ?? item.odno ?? '',
           });
         }
       }
 
-      contYn = json.cont_yn === 'Y' ? 'Y' : 'N';
-      nextKey = json.next_key || '';
+      contYn = (json.cont_yn ?? json.tr_cont ?? '') === 'Y' ? 'Y' : 'N';
+      nextKey = (json.next_key ?? json.ctx_area_nk ?? '') as string;
     } while (contYn === 'Y');
 
     return { executions: allExecutions };

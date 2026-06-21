@@ -4,7 +4,7 @@
 
 import { NextResponse } from 'next/server';
 import { getServerUser, getAdminClient } from '../../../../lib/supabaseServer';
-import { getAdapter, syncBalance, syncExecutions } from '../../../../lib/brokerAdapter';
+import { getAdapter, syncBalance, syncExecutions, ensureToken } from '../../../../lib/brokerAdapter';
 import type { BrokerCredential } from '../../../../data/types';
 
 export const runtime = 'nodejs';
@@ -60,10 +60,20 @@ export async function POST(req: Request) {
       updatedCash?: boolean;
       syncedTrades?: number;
       errors: string[];
+      _debug?: unknown;
     } = { errors: [] };
 
     // 잔고 동기화
     if (body.syncType === 'balance' || body.syncType === 'all') {
+      // 디버그: getBalance 원시 응답도 전달
+      const token2 = await ensureToken(adapter, credential, userId);
+      const accountNo2 = credential.accountNoEnc ? (await import('../../../../lib/crypto')).decrypt(credential.accountNoEnc) : '';
+      const appKey2 = (await import('../../../../lib/crypto')).decrypt(credential.appKeyEnc);
+      const appSecret2 = (await import('../../../../lib/crypto')).decrypt(credential.appSecretEnc);
+      const extra2 = { ...credential.extra, accountType: credential.accountType, appKey: appKey2, appSecret: appSecret2 };
+      const rawBalance = await adapter.getBalance(token2, accountNo2, extra2);
+      result._debug = { rawKeys: rawBalance._debug ? Object.keys(rawBalance._debug as object) : null, rawSample: rawBalance._debug ? JSON.stringify(rawBalance._debug).slice(0, 3000) : null, parsedHoldings: rawBalance.holdings.length, parsedCash: rawBalance.cash };
+
       const balResult = await syncBalance(adapter, credential, userId);
       result.syncedHoldings = balResult.syncedHoldings;
       result.updatedCash = balResult.updatedCash;
