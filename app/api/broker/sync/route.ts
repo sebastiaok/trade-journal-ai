@@ -60,6 +60,7 @@ export async function POST(req: Request) {
       updatedCash?: boolean;
       syncedTrades?: number;
       errors: string[];
+      _debug?: unknown;
     } = { errors: [] };
 
     // 잔고 동기화
@@ -74,6 +75,41 @@ export async function POST(req: Request) {
       const today = new Date().toISOString().slice(0, 10);
       const startDate = body.startDate || today;
       const endDate = body.endDate || today;
+
+      // 디버그: raw 체결 응답 확인
+      if (cred.broker === 'kiwoom') {
+        try {
+          const { decrypt: dec } = await import('../../../../lib/crypto');
+          const { ensureToken } = await import('../../../../lib/brokerAdapter');
+          const tok = await ensureToken(adapter, credential, userId);
+          const acctNo = credential.accountNoEnc ? dec(credential.accountNoEnc) : '';
+          const acctType = credential.accountType || 'VIRTUAL';
+          const bUrl = acctType === 'REAL' ? 'https://api.kiwoom.com' : 'https://mockapi.kiwoom.com';
+          const dRes = await fetch(`${bUrl}/api/dostk/acnt`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json;charset=UTF-8',
+              authorization: `Bearer ${tok}`,
+              'api-id': 'ka10076',
+              'cont-yn': 'N',
+              'next-key': '',
+            },
+            body: JSON.stringify({
+              acnt_no: acctNo,
+              pwd: credential.extra?.pwd || '',
+              qry_tp: '2',
+              sell_tp: '0',
+              stex_tp: '0',
+              strt_dt: startDate.replace(/-/g, ''),
+              end_dt: endDate.replace(/-/g, ''),
+            }),
+          });
+          const dText = await dRes.text();
+          result._debug = { execRaw: dText.slice(0, 4000), startDate, endDate };
+        } catch (de) {
+          result._debug = { execDebugErr: de instanceof Error ? de.message : String(de) };
+        }
+      }
 
       const execResult = await syncExecutions(adapter, credential, userId, startDate, endDate);
       result.syncedTrades = execResult.syncedTrades;
