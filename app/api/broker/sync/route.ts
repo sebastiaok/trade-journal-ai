@@ -4,7 +4,7 @@
 
 import { NextResponse } from 'next/server';
 import { getServerUser, getAdminClient } from '../../../../lib/supabaseServer';
-import { getAdapter, syncBalance, syncExecutions, ensureToken } from '../../../../lib/brokerAdapter';
+import { getAdapter, syncBalance, syncExecutions } from '../../../../lib/brokerAdapter';
 import type { BrokerCredential } from '../../../../data/types';
 
 export const runtime = 'nodejs';
@@ -60,66 +60,10 @@ export async function POST(req: Request) {
       updatedCash?: boolean;
       syncedTrades?: number;
       errors: string[];
-      _debug?: unknown;
     } = { errors: [] };
 
     // 잔고 동기화
     if (body.syncType === 'balance' || body.syncType === 'all') {
-      // 디버그: 캐시 우회, 새 토큰 강제 발급 후 테스트
-      try {
-        const { decrypt: dec } = await import('../../../../lib/crypto');
-        const accountNo2 = credential.accountNoEnc ? dec(credential.accountNoEnc) : '';
-        const appKey2 = dec(credential.appKeyEnc);
-        const appSecret2 = dec(credential.appSecretEnc);
-        const accountType2 = credential.accountType || 'VIRTUAL';
-        const baseUrl = accountType2 === 'REAL' ? 'https://api.kiwoom.com' : 'https://mockapi.kiwoom.com';
-
-        // 1) 새 토큰 직접 발급 (캐시 우회)
-        const tokenRes = await fetch(`${baseUrl}/oauth2/token`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            grant_type: 'client_credentials',
-            appkey: appKey2,
-            secretkey: appSecret2,
-          }),
-        });
-        const tokenJson = await tokenRes.json() as Record<string, unknown>;
-        const freshToken = (tokenJson.access_token ?? tokenJson.token ?? '') as string;
-
-        // 2) 새 토큰으로 잔고 조회
-        const debugRes = await fetch(`${baseUrl}/api/dostk/acnt`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json;charset=UTF-8',
-            authorization: `Bearer ${freshToken}`,
-            'api-id': 'ka10076',
-            'cont-yn': 'N',
-            'next-key': '',
-          },
-          body: JSON.stringify({
-            acnt_no: accountNo2,
-            pwd: credential.extra?.pwd || '',
-            qry_tp: '1',
-            sell_tp: '0',
-            stex_tp: '0',
-          }),
-        });
-        const debugText = await debugRes.text();
-        result._debug = {
-          status: debugRes.status,
-          url: `${baseUrl}/api/dostk/acnt`,
-          accountNo: accountNo2 ? `${accountNo2.slice(0, 4)}****` : '(empty)',
-          tokenStatus: tokenRes.status,
-          tokenResponse: JSON.stringify(tokenJson).slice(0, 500),
-          tokenPrefix: freshToken ? freshToken.slice(0, 20) + '...' : '(empty)',
-          appKeyPrefix: appKey2 ? appKey2.slice(0, 8) + '...' : '(empty)',
-          responseBody: debugText.slice(0, 3000),
-        };
-      } catch (debugErr) {
-        result._debug = { debugError: debugErr instanceof Error ? debugErr.message : String(debugErr) };
-      }
-
       const balResult = await syncBalance(adapter, credential, userId);
       result.syncedHoldings = balResult.syncedHoldings;
       result.updatedCash = balResult.updatedCash;

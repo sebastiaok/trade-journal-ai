@@ -234,10 +234,6 @@ function CredentialCard({
       if (json.syncedTrades != null) parts.push(`체결 ${json.syncedTrades}건`);
       if (json.updatedCash) parts.push('예수금 갱신');
       if (json.errors?.length) parts.push(`오류 ${json.errors.length}건`);
-      // 디버그: raw API 응답 표시
-      if (json._debug) {
-        parts.push(`\n[DEBUG] ${JSON.stringify(json._debug)}`);
-      }
       setResult(`동기화 완료: ${parts.join(', ')}`);
     } catch (e) {
       setResult(`오류: ${e instanceof Error ? e.message : '알 수 없는 오류'}`);
@@ -447,9 +443,9 @@ function CredentialCard({
       )}
 
       {result && (
-        <pre className={`settings-result ${result.startsWith('오류') ? 'settings-result-error' : ''}`} style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all', fontSize: '0.75rem', maxHeight: '300px', overflow: 'auto' }}>
+        <p className={`settings-result ${result.startsWith('오류') ? 'settings-result-error' : ''}`}>
           {result}
-        </pre>
+        </p>
       )}
     </div>
   );

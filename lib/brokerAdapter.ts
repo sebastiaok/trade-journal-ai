@@ -18,7 +18,6 @@ export interface BalanceResult {
     avgCost: number;
     currentPrice?: number;
   }[];
-  _debug?: unknown; // 임시 디버그용 — 키움 API 원시 응답
 }
 
 export interface ExecutionResult {

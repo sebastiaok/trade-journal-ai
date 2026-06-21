@@ -56,15 +56,25 @@ export class KiwoomAdapter implements BrokerAdapter {
 
     const json = await res.json() as Record<string, unknown>;
 
+    // 키움 API는 return_code로 에러를 반환 (HTTP 200이지만 실패)
+    if (json.return_code && Number(json.return_code) !== 0) {
+      throw new Error(`키움 토큰 발급 실패: ${json.return_msg ?? JSON.stringify(json)}`);
+    }
+
     const accessToken = (json.access_token ?? json.token ?? '') as string;
     if (!accessToken) {
       throw new Error(`키움 토큰 발급 실패: 응답에 access_token 없음 — ${JSON.stringify(json)}`);
     }
 
-    // expires_in이 초 단위 숫자이거나, expire_dt(만료일시 문자열)일 수 있음
+    // 만료 시간 파싱: expires_dt "20260622220558" 형식 또는 expires_in(초)
     let expiresAt: string;
     if (json.expires_in && Number(json.expires_in) > 0) {
       expiresAt = new Date(Date.now() + Number(json.expires_in) * 1000).toISOString();
+    } else if (json.expires_dt) {
+      // "20260622220558" → ISO
+      const dt = String(json.expires_dt);
+      const parsed = `${dt.slice(0, 4)}-${dt.slice(4, 6)}-${dt.slice(6, 8)}T${dt.slice(8, 10)}:${dt.slice(10, 12)}:${dt.slice(12, 14)}`;
+      expiresAt = new Date(parsed).toISOString();
     } else if (json.expire_dt) {
       expiresAt = new Date(String(json.expire_dt)).toISOString();
     } else {
@@ -83,12 +93,10 @@ export class KiwoomAdapter implements BrokerAdapter {
     const accountType = extra?.accountType as 'REAL' | 'VIRTUAL' || 'VIRTUAL';
     const base = this.baseUrl(accountType);
 
-    // 페이지네이션 처리
     let allHoldings: BalanceResult['holdings'] = [];
     let cash = 0;
     let contYn = 'N';
     let nextKey = '';
-    let debugRaw: unknown = null;
 
     do {
       const headers: Record<string, string> = {
@@ -118,11 +126,9 @@ export class KiwoomAdapter implements BrokerAdapter {
 
       const json = await res.json() as Record<string, unknown>;
 
-      // 디버그: 실제 응답 구조를 _debug에 저장 (최초 페이지만)
-      if (contYn === 'N') {
-        debugRaw = json;
-        console.log('[kiwoom:getBalance] response keys:', Object.keys(json));
-        console.log('[kiwoom:getBalance] sample:', JSON.stringify(json).slice(0, 1000));
+      // 키움 API 비즈니스 에러 체크
+      if (json.return_code && Number(json.return_code) !== 0) {
+        throw new Error(`키움 잔고 조회 실패: ${json.return_msg ?? JSON.stringify(json)}`);
       }
 
       // 예수금: 여러 필드명 대응
@@ -132,7 +138,7 @@ export class KiwoomAdapter implements BrokerAdapter {
       }
 
       // 보유종목: 여러 배열 키 대응
-      const holdingsArr = (json.acnt_bal ?? json.output1 ?? json.stk_list ?? json.output ?? []) as Array<Record<string, string>>;
+      const holdingsArr = (json.acnt_bal ?? json.output1 ?? json.stk_list ?? json.output ?? json.data ?? []) as Array<Record<string, string>>;
       if (Array.isArray(holdingsArr)) {
         for (const item of holdingsArr) {
           const qty = Number(item.hldg_qty ?? item.hold_qty ?? item.qty ?? item.balan_qty ?? 0);
@@ -153,7 +159,7 @@ export class KiwoomAdapter implements BrokerAdapter {
       nextKey = (json['next-key'] ?? json.next_key ?? json.ctx_area_nk ?? '') as string;
     } while (contYn === 'Y');
 
-    return { cash, holdings: allHoldings, _debug: debugRaw };
+    return { cash, holdings: allHoldings };
   }
 
   async getExecutions(
@@ -199,13 +205,12 @@ export class KiwoomAdapter implements BrokerAdapter {
 
       const json = await res.json() as Record<string, unknown>;
 
-      // 디버그: 실제 응답 구조 로깅
-      if (contYn === 'N') {
-        console.log('[kiwoom:getExecutions] response keys:', Object.keys(json));
-        console.log('[kiwoom:getExecutions] sample:', JSON.stringify(json).slice(0, 1000));
+      // 키움 API 비즈니스 에러 체크
+      if (json.return_code && Number(json.return_code) !== 0) {
+        throw new Error(`키움 체결 조회 실패: ${json.return_msg ?? JSON.stringify(json)}`);
       }
 
-      const execArr = (json.ccnl_list ?? json.output1 ?? json.output ?? []) as Array<Record<string, string>>;
+      const execArr = (json.ccnl_list ?? json.output1 ?? json.output ?? json.data ?? []) as Array<Record<string, string>>;
       if (Array.isArray(execArr)) {
         for (const item of execArr) {
           const qty = Number(item.ccnl_qty ?? item.tot_ccld_qty ?? item.qty ?? 0);
