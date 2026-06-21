@@ -13,9 +13,35 @@ const BROKER_LABELS: Record<BrokerType, string> = { kis: '한국투자증권 (KI
 
 /* ───────── 인증 헤더 ───────── */
 
+function getTokenFromStorage(): string | null {
+  if (typeof window === 'undefined') return null;
+  // Supabase는 localStorage에 세션을 저장한다
+  // 키 형식: sb-{project-ref}-auth-token
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
+  const match = url.match(/\/\/([^.]+)\./);
+  const ref = match?.[1];
+  if (!ref) return null;
+
+  const raw = window.localStorage.getItem(`sb-${ref}-auth-token`);
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    return parsed?.access_token ?? null;
+  } catch {
+    return null;
+  }
+}
+
 async function authHeaders(): Promise<Record<string, string>> {
-  const { data } = await supabase.auth.getSession();
-  const token = data.session?.access_token;
+  // 1차: localStorage에서 직접 읽기
+  let token = getTokenFromStorage();
+
+  // 2차: Supabase API
+  if (!token) {
+    const { data } = await supabase.auth.getSession();
+    token = data.session?.access_token ?? null;
+  }
+
   return token
     ? { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
     : { 'Content-Type': 'application/json' };
@@ -208,6 +234,10 @@ function CredentialCard({
       if (json.syncedTrades != null) parts.push(`체결 ${json.syncedTrades}건`);
       if (json.updatedCash) parts.push('예수금 갱신');
       if (json.errors?.length) parts.push(`오류 ${json.errors.length}건`);
+      // 디버그: raw API 응답 표시
+      if (json._debug) {
+        parts.push(`\n[DEBUG] ${JSON.stringify(json._debug)}`);
+      }
       setResult(`동기화 완료: ${parts.join(', ')}`);
     } catch (e) {
       setResult(`오류: ${e instanceof Error ? e.message : '알 수 없는 오류'}`);
@@ -417,9 +447,9 @@ function CredentialCard({
       )}
 
       {result && (
-        <p className={`settings-result ${result.startsWith('오류') ? 'settings-result-error' : ''}`}>
+        <pre className={`settings-result ${result.startsWith('오류') ? 'settings-result-error' : ''}`} style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all', fontSize: '0.75rem', maxHeight: '300px', overflow: 'auto' }}>
           {result}
-        </p>
+        </pre>
       )}
     </div>
   );
@@ -451,6 +481,9 @@ function AddCredentialForm({
     setTestResult(null);
     try {
       const headers = await authHeaders();
+      if (!headers.Authorization) {
+        throw new Error('인증 토큰을 가져올 수 없습니다. 페이지를 새로고침 후 다시 로그인해 주세요.');
+      }
       const res = await fetch('/api/broker/test', {
         method: 'POST',
         headers,
