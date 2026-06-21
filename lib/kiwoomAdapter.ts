@@ -92,12 +92,11 @@ export class KiwoomAdapter implements BrokerAdapter {
 
     do {
       const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/json;charset=UTF-8',
         authorization: `Bearer ${token}`,
-        appkey: extra?.appKey || '',
-        secretkey: extra?.appSecret || '',
-        cont_yn: contYn,
-        next_key: nextKey,
+        'api-id': 'ka10076',
+        'cont-yn': contYn,
+        'next-key': nextKey,
       };
 
       const res = await fetchWithRetry(`${base}/api/dostk/acntbal`, {
@@ -174,12 +173,11 @@ export class KiwoomAdapter implements BrokerAdapter {
 
     do {
       const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/json;charset=UTF-8',
         authorization: `Bearer ${token}`,
-        appkey: extra?.appKey || '',
-        secretkey: extra?.appSecret || '',
-        cont_yn: contYn,
-        next_key: nextKey,
+        'api-id': 'ka10076',
+        'cont-yn': contYn,
+        'next-key': nextKey,
       };
 
       const res = await fetchWithRetry(`${base}/api/dostk/ccnl`, {

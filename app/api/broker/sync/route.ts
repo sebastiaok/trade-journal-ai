@@ -73,22 +73,18 @@ export async function POST(req: Request) {
         const accountType2 = credential.accountType || 'VIRTUAL';
         const baseUrl = accountType2 === 'REAL' ? 'https://api.kiwoom.com' : 'https://mockapi.kiwoom.com';
 
-        const appKey2 = dec(credential.appKeyEnc);
-        const appSecret2 = dec(credential.appSecretEnc);
-
-        // 시도 1: appkey + secretkey 헤더 + body에도 포함
+        // api-id 헤더 사용 (키움 REST API 공식 스펙)
         const debugRes = await fetch(`${baseUrl}/api/dostk/acntbal`, {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json',
+            'Content-Type': 'application/json;charset=UTF-8',
             authorization: `Bearer ${token2}`,
-            appkey: appKey2,
-            secretkey: appSecret2,
+            'api-id': 'ka10076',
+            'cont-yn': 'N',
+            'next-key': '',
           },
           body: JSON.stringify({
             acnt_no: accountNo2,
-            appkey: appKey2,
-            secretkey: appSecret2,
             pwd: credential.extra?.pwd || '',
             inqr_dvsn: '1',
           }),
@@ -99,7 +95,6 @@ export async function POST(req: Request) {
           url: `${baseUrl}/api/dostk/acntbal`,
           accountNo: accountNo2 ? `${accountNo2.slice(0, 4)}****` : '(empty)',
           accountType: accountType2,
-          appKeyPrefix: appKey2 ? appKey2.slice(0, 6) + '...' : '(empty)',
           responseBody: debugText.slice(0, 4000),
         };
       } catch (debugErr) {
