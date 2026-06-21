@@ -73,11 +73,15 @@ export async function POST(req: Request) {
         const accountType2 = credential.accountType || 'VIRTUAL';
         const baseUrl = accountType2 === 'REAL' ? 'https://api.kiwoom.com' : 'https://mockapi.kiwoom.com';
 
+        const appKey2 = dec(credential.appKeyEnc);
+        const appSecret2 = dec(credential.appSecretEnc);
         const debugRes = await fetch(`${baseUrl}/api/dostk/acntbal`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             authorization: `Bearer ${token2}`,
+            appkey: appKey2,
+            appsecretkey: appSecret2,
             cont_yn: 'N',
             next_key: '',
           },

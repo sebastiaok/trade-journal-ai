@@ -94,6 +94,8 @@ export class KiwoomAdapter implements BrokerAdapter {
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
         authorization: `Bearer ${token}`,
+        appkey: extra?.appKey || '',
+        appsecretkey: extra?.appSecret || '',
         cont_yn: contYn,
         next_key: nextKey,
       };
@@ -174,6 +176,8 @@ export class KiwoomAdapter implements BrokerAdapter {
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
         authorization: `Bearer ${token}`,
+        appkey: extra?.appKey || '',
+        appsecretkey: extra?.appSecret || '',
         cont_yn: contYn,
         next_key: nextKey,
       };
