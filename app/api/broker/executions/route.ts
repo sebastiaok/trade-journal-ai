@@ -64,14 +64,43 @@ export async function POST(req: Request) {
     const appKey = decrypt(credential.appKeyEnc);
     const appSecret = decrypt(credential.appSecretEnc);
 
-    const result = await adapter.getExecutions(token, accountNo, body.startDate, body.endDate, {
+    const extra = {
       ...credential.extra,
       accountType: credential.accountType,
       appKey,
       appSecret,
-    });
+    };
 
-    return NextResponse.json(result);
+    // 디버그: 키움 raw 응답 포함
+    let _debug: unknown = undefined;
+    if (cred.broker === 'kiwoom') {
+      const acctType = credential.accountType || 'VIRTUAL';
+      const bUrl = acctType === 'REAL' ? 'https://api.kiwoom.com' : 'https://mockapi.kiwoom.com';
+      const dRes = await fetch(`${bUrl}/api/dostk/acnt`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json;charset=UTF-8',
+          authorization: `Bearer ${token}`,
+          'api-id': 'ka10076',
+          'cont-yn': 'N',
+          'next-key': '',
+        },
+        body: JSON.stringify({
+          acnt_no: accountNo,
+          pwd: credential.extra?.pwd || '',
+          qry_tp: '2',
+          sell_tp: '0',
+          stex_tp: '0',
+          strt_dt: body.startDate.replace(/-/g, ''),
+          end_dt: body.endDate.replace(/-/g, ''),
+        }),
+      });
+      _debug = { raw: (await dRes.text()).slice(0, 4000), startDate: body.startDate, endDate: body.endDate };
+    }
+
+    const result = await adapter.getExecutions(token, accountNo, body.startDate, body.endDate, extra);
+
+    return NextResponse.json({ ...result, _debug });
   } catch (e) {
     return NextResponse.json(
       { error: e instanceof Error ? e.message : '체결 조회 실패' },

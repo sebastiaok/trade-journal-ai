@@ -174,6 +174,7 @@ function CredentialCard({
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || '조회 실패');
       setPreview(json.executions ?? []);
+      if (json._debug) setResult(`[DEBUG] ${JSON.stringify(json._debug)}`);
     } catch (e) {
       setResult(`오류: ${e instanceof Error ? e.message : '조회 실패'}`);
     } finally {
