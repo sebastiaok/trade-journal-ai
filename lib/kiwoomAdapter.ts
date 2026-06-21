@@ -138,7 +138,7 @@ export class KiwoomAdapter implements BrokerAdapter {
       }
 
       // 보유종목: 여러 배열 키 대응
-      const holdingsArr = (json.acnt_bal ?? json.output1 ?? json.stk_list ?? json.output ?? json.data ?? []) as Array<Record<string, string>>;
+      const holdingsArr = (json.cntr ?? json.acnt_bal ?? json.output1 ?? json.stk_list ?? json.output ?? json.data ?? []) as Array<Record<string, string>>;
       if (Array.isArray(holdingsArr)) {
         for (const item of holdingsArr) {
           const qty = Number(item.hldg_qty ?? item.hold_qty ?? item.qty ?? item.balan_qty ?? 0);
@@ -216,7 +216,7 @@ export class KiwoomAdapter implements BrokerAdapter {
         throw new Error(`키움 체결 조회 실패: ${json.return_msg ?? JSON.stringify(json)}`);
       }
 
-      const execArr = (json.filled_list ?? json.ccnl_list ?? json.output1 ?? json.output ?? json.data ?? []) as Array<Record<string, string>>;
+      const execArr = (json.cntr ?? json.filled_list ?? json.ccnl_list ?? json.output1 ?? json.output ?? json.data ?? []) as Array<Record<string, string>>;
       if (Array.isArray(execArr)) {
         for (const item of execArr) {
           const qty = Number(item.ccnl_qty ?? item.tot_ccld_qty ?? item.qty ?? item.hldg_qty ?? 0);
