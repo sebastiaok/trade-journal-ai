@@ -102,20 +102,18 @@ export class KiwoomAdapter implements BrokerAdapter {
       const headers: Record<string, string> = {
         'Content-Type': 'application/json;charset=UTF-8',
         authorization: `Bearer ${token}`,
-        'api-id': 'ka10076',
+        'api-id': 'kt00004',
         'cont-yn': contYn,
         'next-key': nextKey,
       };
 
+      // kt00004 (계좌평가현황요청): 토큰으로 계좌 식별, acnt_no/pwd 불필요
       const res = await fetchWithRetry(`${base}/api/dostk/acnt`, {
         method: 'POST',
         headers,
         body: JSON.stringify({
-          acnt_no: accountNo,
-          pwd: extra?.pwd || '',
-          qry_tp: '1',
-          sell_tp: '0',
-          stex_tp: '0',
+          qry_tp: '0',
+          dmst_stex_tp: 'KRX',
         }),
       });
 
@@ -131,25 +129,25 @@ export class KiwoomAdapter implements BrokerAdapter {
         throw new Error(`키움 잔고 조회 실패: ${json.return_msg ?? JSON.stringify(json)}`);
       }
 
-      // 예수금: 여러 필드명 대응
-      const depositVal = json.deposits ?? json.dnca_tot_amt ?? json.dps_amt ?? json.d2_dps ?? 0;
+      // 예수금: entr (kt00004 응답 필드)
+      const depositVal = json.entr ?? json.d2_entra ?? json.deposits ?? json.dnca_tot_amt ?? 0;
       if (depositVal) {
         cash = Number(depositVal);
       }
 
-      // 보유종목: 여러 배열 키 대응
-      const holdingsArr = (json.cntr ?? json.acnt_bal ?? json.output1 ?? json.stk_list ?? json.output ?? json.data ?? []) as Array<Record<string, string>>;
+      // 보유종목: stk_acnt_evlt_prst (kt00004 응답 키)
+      const holdingsArr = (json.stk_acnt_evlt_prst ?? json.stk_cntr_remn ?? json.cntr ?? []) as Array<Record<string, string>>;
       if (Array.isArray(holdingsArr)) {
         for (const item of holdingsArr) {
-          const qty = Number(item.hldg_qty ?? item.hold_qty ?? item.qty ?? item.balan_qty ?? 0);
+          const qty = Number(item.rmnd_qty ?? item.cur_qty ?? item.hldg_qty ?? item.qty ?? 0);
           if (qty > 0) {
             allHoldings.push({
-              symbol: item.stk_nm ?? item.prdt_name ?? item.name ?? '',
-              name: item.stk_nm ?? item.prdt_name ?? item.name ?? '',
-              code: item.stk_cd ?? item.pdno ?? item.code ?? '',
+              symbol: item.stk_nm ?? item.prdt_name ?? '',
+              name: item.stk_nm ?? item.prdt_name ?? '',
+              code: item.stk_cd ?? item.pdno ?? '',
               quantity: qty,
-              avgCost: Math.round(Number(item.avg_buy_prc ?? item.pchs_avg_pric ?? item.avg_prc ?? 0)),
-              currentPrice: Number(item.cur_prc ?? item.prpr ?? item.now_pric ?? 0) || undefined,
+              avgCost: Math.round(Number(item.avg_prc ?? item.buy_uv ?? item.pur_pric ?? 0)),
+              currentPrice: Number(item.cur_prc ?? item.prpr ?? 0) || undefined,
             });
           }
         }
@@ -183,24 +181,22 @@ export class KiwoomAdapter implements BrokerAdapter {
       const headers: Record<string, string> = {
         'Content-Type': 'application/json;charset=UTF-8',
         authorization: `Bearer ${token}`,
-        'api-id': 'ka10076',
+        'api-id': 'ka10072',
         'cont-yn': contYn,
         'next-key': nextKey,
       };
 
-      // 체결내역도 /api/dostk/acnt + ka10076 사용 (잔고와 동일 endpoint)
-      // 응답의 filled_list 키에 체결내역이 들어있음
+      // ka10072 (일자별종목별실현손익요청): 기간 내 매매내역 조회
       const res = await fetchWithRetry(`${base}/api/dostk/acnt`, {
         method: 'POST',
         headers,
         body: JSON.stringify({
           acnt_no: accountNo,
           pwd: extra?.pwd || '',
-          qry_tp: '2',
-          sell_tp: '0',
-          stex_tp: '0',
           strt_dt: startDt,
           end_dt: endDt,
+          sell_tp: '0',
+          stex_tp: '0',
         }),
       });
 
@@ -216,14 +212,14 @@ export class KiwoomAdapter implements BrokerAdapter {
         throw new Error(`키움 체결 조회 실패: ${json.return_msg ?? JSON.stringify(json)}`);
       }
 
-      const execArr = (json.cntr ?? json.filled_list ?? json.ccnl_list ?? json.output1 ?? json.output ?? json.data ?? []) as Array<Record<string, string>>;
+      const execArr = (json.cntr ?? json.dt_smry ?? json.output1 ?? json.output ?? json.data ?? []) as Array<Record<string, string>>;
       if (Array.isArray(execArr)) {
         for (const item of execArr) {
-          const qty = Number(item.ccnl_qty ?? item.tot_ccld_qty ?? item.qty ?? item.hldg_qty ?? 0);
+          const qty = Number(item.ccnl_qty ?? item.tot_ccld_qty ?? item.qty ?? item.tdy_buyq ?? item.tdy_sellq ?? 0);
           if (qty <= 0) continue;
           const sideRaw = item.buy_sell_tp ?? item.sll_buy_dvsn_cd ?? item.sell_tp ?? item.side ?? '';
           const isSell = sideRaw === '1' || sideRaw === '01' || sideRaw === 'sell';
-          const dateStr = item.ccnl_dt ?? item.ord_dt ?? item.stck_bsop_date ?? item.date ?? endDt;
+          const dateStr = item.dt ?? item.ccnl_dt ?? item.ord_dt ?? item.stck_bsop_date ?? endDt;
           const timeStr = item.ccnl_tm ?? item.ord_tmd ?? item.time ?? '000000';
           const y = dateStr.slice(0, 4);
           const m = dateStr.slice(4, 6);
@@ -236,9 +232,9 @@ export class KiwoomAdapter implements BrokerAdapter {
             code: item.stk_cd ?? item.pdno ?? item.code ?? '',
             side: isSell ? 'sell' : 'buy',
             quantity: qty,
-            price: Math.round(Number(item.ccnl_prc ?? item.avg_prvs ?? item.pchs_avg_pric ?? item.price ?? 0)),
-            fee: Number(item.fee ?? item.tot_fee ?? 0) || 0,
-            tax: Number(item.tax ?? item.tot_tax ?? 0) || 0,
+            price: Math.round(Number(item.ccnl_prc ?? item.avg_prvs ?? item.pur_pric ?? item.price ?? 0)),
+            fee: Number(item.fee ?? item.tdy_trde_cmsn ?? item.tot_fee ?? 0) || 0,
+            tax: Number(item.tax ?? item.tdy_trde_tax ?? item.tot_tax ?? 0) || 0,
             executedAt: `${y}-${m}-${d}T${hh}:${mm}:00`,
             orderNo: item.ord_no ?? item.odno ?? item.order_no ?? '',
           });

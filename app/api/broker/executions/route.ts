@@ -71,7 +71,7 @@ export async function POST(req: Request) {
       appSecret,
     };
 
-    // 디버그: 키움 raw 응답 포함
+    // 디버그: ka10072 (일자별종목별실현손익) raw 응답
     let _debug: unknown = undefined;
     if (cred.broker === 'kiwoom') {
       const acctType = credential.accountType || 'VIRTUAL';
@@ -81,18 +81,17 @@ export async function POST(req: Request) {
         headers: {
           'Content-Type': 'application/json;charset=UTF-8',
           authorization: `Bearer ${token}`,
-          'api-id': 'ka10076',
+          'api-id': 'ka10072',
           'cont-yn': 'N',
           'next-key': '',
         },
         body: JSON.stringify({
           acnt_no: accountNo,
           pwd: credential.extra?.pwd || '',
-          qry_tp: '2',
-          sell_tp: '0',
-          stex_tp: '0',
           strt_dt: body.startDate.replace(/-/g, ''),
           end_dt: body.endDate.replace(/-/g, ''),
+          sell_tp: '0',
+          stex_tp: '0',
         }),
       });
       _debug = { raw: (await dRes.text()).slice(0, 4000), startDate: body.startDate, endDate: body.endDate };
