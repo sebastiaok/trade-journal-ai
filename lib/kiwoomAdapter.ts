@@ -107,6 +107,7 @@ export class KiwoomAdapter implements BrokerAdapter {
           pwd: extra?.pwd || '',
           qry_tp: '1',
           sell_tp: '0',
+          stex_tp: '0',
         }),
       });
 
