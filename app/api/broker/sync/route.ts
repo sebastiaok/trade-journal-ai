@@ -65,6 +65,38 @@ export async function POST(req: Request) {
 
     // 잔고 동기화
     if (body.syncType === 'balance' || body.syncType === 'all') {
+      // 디버그: 키움 잔고 raw 응답
+      if (cred.broker === 'kiwoom') {
+        try {
+          const { decrypt: dec } = await import('../../../../lib/crypto');
+          const { ensureToken: et } = await import('../../../../lib/brokerAdapter');
+          const tok = await et(adapter, credential, userId);
+          const acctNo = credential.accountNoEnc ? dec(credential.accountNoEnc) : '';
+          const acctType = credential.accountType || 'VIRTUAL';
+          const bUrl = acctType === 'REAL' ? 'https://api.kiwoom.com' : 'https://mockapi.kiwoom.com';
+          const dRes = await fetch(`${bUrl}/api/dostk/acnt`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json;charset=UTF-8',
+              authorization: `Bearer ${tok}`,
+              'api-id': 'ka10076',
+              'cont-yn': 'N',
+              'next-key': '',
+            },
+            body: JSON.stringify({
+              acnt_no: acctNo,
+              pwd: credential.extra?.pwd || '',
+              qry_tp: '1',
+              sell_tp: '0',
+              stex_tp: '0',
+            }),
+          });
+          result._debug = { balanceRaw: (await dRes.text()).slice(0, 4000) };
+        } catch (de) {
+          result._debug = { debugErr: de instanceof Error ? de.message : String(de) };
+        }
+      }
+
       const balResult = await syncBalance(adapter, credential, userId);
       result.syncedHoldings = balResult.syncedHoldings;
       result.updatedCash = balResult.updatedCash;
