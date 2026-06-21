@@ -100,7 +100,7 @@ export async function POST(req: Request) {
           body: JSON.stringify({
             acnt_no: accountNo2,
             pwd: credential.extra?.pwd || '',
-            inqr_dvsn: '1',
+            qry_tp: '1',
           }),
         });
         const debugText = await debugRes.text();
@@ -109,9 +109,10 @@ export async function POST(req: Request) {
           url: `${baseUrl}/api/dostk/acnt`,
           accountNo: accountNo2 ? `${accountNo2.slice(0, 4)}****` : '(empty)',
           tokenStatus: tokenRes.status,
+          tokenResponse: JSON.stringify(tokenJson).slice(0, 500),
           tokenPrefix: freshToken ? freshToken.slice(0, 20) + '...' : '(empty)',
-          tokenKeys: Object.keys(tokenJson),
-          responseBody: debugText.slice(0, 4000),
+          appKeyPrefix: appKey2 ? appKey2.slice(0, 8) + '...' : '(empty)',
+          responseBody: debugText.slice(0, 3000),
         };
       } catch (debugErr) {
         result._debug = { debugError: debugErr instanceof Error ? debugErr.message : String(debugErr) };

@@ -105,7 +105,7 @@ export class KiwoomAdapter implements BrokerAdapter {
         body: JSON.stringify({
           acnt_no: accountNo,
           pwd: extra?.pwd || '',
-          inqr_dvsn: '1',
+          qry_tp: '1',
         }),
       });
 
@@ -147,8 +147,8 @@ export class KiwoomAdapter implements BrokerAdapter {
         }
       }
 
-      contYn = (json.cont_yn ?? json.tr_cont ?? '') === 'Y' ? 'Y' : 'N';
-      nextKey = (json.next_key ?? json.ctx_area_nk ?? '') as string;
+      contYn = (json['cont-yn'] ?? json.cont_yn ?? json.tr_cont ?? '') === 'Y' ? 'Y' : 'N';
+      nextKey = (json['next-key'] ?? json.next_key ?? json.ctx_area_nk ?? '') as string;
     } while (contYn === 'Y');
 
     return { cash, holdings: allHoldings, _debug: debugRaw };
@@ -232,8 +232,8 @@ export class KiwoomAdapter implements BrokerAdapter {
         }
       }
 
-      contYn = (json.cont_yn ?? json.tr_cont ?? '') === 'Y' ? 'Y' : 'N';
-      nextKey = (json.next_key ?? json.ctx_area_nk ?? '') as string;
+      contYn = (json['cont-yn'] ?? json.cont_yn ?? json.tr_cont ?? '') === 'Y' ? 'Y' : 'N';
+      nextKey = (json['next-key'] ?? json.next_key ?? json.ctx_area_nk ?? '') as string;
     } while (contYn === 'Y');
 
     return { executions: allExecutions };
