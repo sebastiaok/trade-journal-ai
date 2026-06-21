@@ -95,7 +95,7 @@ export class KiwoomAdapter implements BrokerAdapter {
         'Content-Type': 'application/json',
         authorization: `Bearer ${token}`,
         appkey: extra?.appKey || '',
-        appsecretkey: extra?.appSecret || '',
+        secretkey: extra?.appSecret || '',
         cont_yn: contYn,
         next_key: nextKey,
       };
@@ -177,7 +177,7 @@ export class KiwoomAdapter implements BrokerAdapter {
         'Content-Type': 'application/json',
         authorization: `Bearer ${token}`,
         appkey: extra?.appKey || '',
-        appsecretkey: extra?.appSecret || '',
+        secretkey: extra?.appSecret || '',
         cont_yn: contYn,
         next_key: nextKey,
       };

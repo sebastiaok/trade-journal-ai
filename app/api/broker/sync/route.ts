@@ -75,18 +75,20 @@ export async function POST(req: Request) {
 
         const appKey2 = dec(credential.appKeyEnc);
         const appSecret2 = dec(credential.appSecretEnc);
+
+        // 시도 1: appkey + secretkey 헤더 + body에도 포함
         const debugRes = await fetch(`${baseUrl}/api/dostk/acntbal`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             authorization: `Bearer ${token2}`,
             appkey: appKey2,
-            appsecretkey: appSecret2,
-            cont_yn: 'N',
-            next_key: '',
+            secretkey: appSecret2,
           },
           body: JSON.stringify({
             acnt_no: accountNo2,
+            appkey: appKey2,
+            secretkey: appSecret2,
             pwd: credential.extra?.pwd || '',
             inqr_dvsn: '1',
           }),
@@ -97,6 +99,7 @@ export async function POST(req: Request) {
           url: `${baseUrl}/api/dostk/acntbal`,
           accountNo: accountNo2 ? `${accountNo2.slice(0, 4)}****` : '(empty)',
           accountType: accountType2,
+          appKeyPrefix: appKey2 ? appKey2.slice(0, 6) + '...' : '(empty)',
           responseBody: debugText.slice(0, 4000),
         };
       } catch (debugErr) {
