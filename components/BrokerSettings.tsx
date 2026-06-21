@@ -96,6 +96,18 @@ export default function BrokerSettings() {
 
 /* ───────── 자격 카드 ───────── */
 
+interface PreviewExecution {
+  symbol: string;
+  code: string;
+  side: 'buy' | 'sell';
+  quantity: number;
+  price: number;
+  fee: number;
+  tax: number;
+  executedAt: string;
+  orderNo: string;
+}
+
 function CredentialCard({
   credential,
   accountName,
@@ -109,20 +121,83 @@ function CredentialCard({
   const [result, setResult] = useState<string | null>(null);
   const [showTypeSwitch, setShowTypeSwitch] = useState(false);
 
-  async function handleSync(syncType: 'balance' | 'executions' | 'all') {
+  // 날짜 범�� 선택
+  const today = new Date().toISOString().slice(0, 10);
+  const [startDate, setStartDate] = useState(today);
+  const [endDate, setEndDate] = useState(today);
+
+  // 미리보기
+  const [preview, setPreview] = useState<PreviewExecution[] | null>(null);
+  const [loadingPreview, setLoadingPreview] = useState(false);
+
+  async function handlePreviewExecutions() {
+    setLoadingPreview(true);
+    setPreview(null);
+    setResult(null);
+    try {
+      const headers = await authHeaders();
+      const res = await fetch('/api/broker/executions', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          credentialId: credential.id,
+          startDate,
+          endDate,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || '조회 실패');
+      setPreview(json.executions ?? []);
+    } catch (e) {
+      setResult(`오류: ${e instanceof Error ? e.message : '조회 실패'}`);
+    } finally {
+      setLoadingPreview(false);
+    }
+  }
+
+  async function handleConfirmSync() {
+    setSyncing('executions');
+    setResult(null);
+    try {
+      const headers = await authHeaders();
+      const res = await fetch('/api/broker/sync', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          credentialId: credential.id,
+          syncType: 'executions',
+          startDate,
+          endDate,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || '동기화 실패');
+
+      const parts: string[] = [];
+      if (json.syncedTrades != null) parts.push(`체결 ${json.syncedTrades}건 반영`);
+      if (json.errors?.length) parts.push(`오류 ${json.errors.length}건`);
+      setResult(`동기화 완료: ${parts.join(', ')}`);
+      setPreview(null);
+    } catch (e) {
+      setResult(`오류: ${e instanceof Error ? e.message : '동기화 실패'}`);
+    } finally {
+      setSyncing(null);
+    }
+  }
+
+  async function handleSync(syncType: 'balance' | 'all') {
     setSyncing(syncType);
     setResult(null);
     try {
       const headers = await authHeaders();
-      const today = new Date().toISOString().slice(0, 10);
       const res = await fetch('/api/broker/sync', {
         method: 'POST',
         headers,
         body: JSON.stringify({
           credentialId: credential.id,
           syncType,
-          startDate: today,
-          endDate: today,
+          startDate,
+          endDate,
         }),
       });
       const json = await res.json();
@@ -197,6 +272,31 @@ function CredentialCard({
         <span className="broker-card-account">{accountName}</span>
       </div>
 
+      {/* 날짜 범위 선택 */}
+      <div className="broker-date-range">
+        <label className="broker-date-label">
+          시작일
+          <input
+            type="date"
+            className="form-input broker-date-input"
+            value={startDate}
+            max={endDate}
+            onChange={(e) => setStartDate(e.target.value)}
+          />
+        </label>
+        <label className="broker-date-label">
+          종료일
+          <input
+            type="date"
+            className="form-input broker-date-input"
+            value={endDate}
+            min={startDate}
+            max={today}
+            onChange={(e) => setEndDate(e.target.value)}
+          />
+        </label>
+      </div>
+
       <div className="broker-card-actions">
         <button
           type="button"
@@ -209,10 +309,10 @@ function CredentialCard({
         <button
           type="button"
           className="tool-btn"
-          disabled={syncing !== null}
-          onClick={() => handleSync('executions')}
+          disabled={syncing !== null || loadingPreview}
+          onClick={handlePreviewExecutions}
         >
-          {syncing === 'executions' ? '동기화 중…' : '체결 동기화'}
+          {loadingPreview ? '조회 중…' : '체결 조회 (미리보기)'}
         </button>
         <button
           type="button"
@@ -223,6 +323,69 @@ function CredentialCard({
           {syncing === 'all' ? '동기화 중…' : '전체 동기화'}
         </button>
       </div>
+
+      {/* 체결 미리보기 테이블 */}
+      {preview !== null && (
+        <div className="broker-preview">
+          <div className="broker-preview-header">
+            <strong>체결내역 미리보기</strong>
+            <span className="broker-preview-count">{preview.length}건</span>
+          </div>
+          {preview.length === 0 ? (
+            <p className="broker-preview-empty">조회 기간에 체결 내역이 없습니다.</p>
+          ) : (
+            <>
+              <div className="broker-preview-table-wrap">
+                <table className="broker-preview-table">
+                  <thead>
+                    <tr>
+                      <th>일시</th>
+                      <th>종목</th>
+                      <th>구분</th>
+                      <th className="num">수량</th>
+                      <th className="num">단가</th>
+                      <th className="num">금액</th>
+                      <th className="num">수수료+세금</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {preview.map((exec, i) => (
+                      <tr key={`${exec.orderNo}-${i}`}>
+                        <td>{exec.executedAt.slice(0, 10)}</td>
+                        <td>{exec.symbol}</td>
+                        <td className={exec.side === 'buy' ? 'pnl-up' : 'pnl-down'}>
+                          {exec.side === 'buy' ? '매수' : '매도'}
+                        </td>
+                        <td className="num mono">{exec.quantity.toLocaleString()}</td>
+                        <td className="num mono">{exec.price.toLocaleString()}</td>
+                        <td className="num mono">{(exec.price * exec.quantity).toLocaleString()}</td>
+                        <td className="num mono">{(exec.fee + exec.tax).toLocaleString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="broker-card-actions" style={{ marginTop: '12px' }}>
+                <button
+                  type="button"
+                  className="tool-btn"
+                  disabled={syncing !== null}
+                  onClick={handleConfirmSync}
+                >
+                  {syncing === 'executions' ? '반영 중…' : `${preview.length}건 반영하기`}
+                </button>
+                <button
+                  type="button"
+                  className="tool-btn"
+                  onClick={() => setPreview(null)}
+                >
+                  취소
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      )}
 
       <div className="broker-card-meta">
         <button

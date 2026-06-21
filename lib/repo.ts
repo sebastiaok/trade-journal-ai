@@ -266,10 +266,12 @@ function normalizeAccount(a: Account): Account {
   return { ...a, cashBalance: Number(a.cashBalance) || 0 };
 }
 
-/** localStorage의 Trade 행에서 누락된 숫자 필드를 0으로 보정 */
+/** localStorage의 Trade 행에서 누락된 필드를 보정 */
 function normalizeTrade(t: Trade): Trade {
   return {
     ...t,
+    accountId: t.accountId || '',
+    executedAt: t.executedAt || new Date().toISOString(),
     price: Number(t.price) || 0,
     quantity: Number(t.quantity) || 0,
     amount: Number(t.amount) || 0,
@@ -856,12 +858,16 @@ export const priceCacheRepo = {
 export async function takeSnapshot(
   holdings: Holding[],
   accounts: Account[],
+  priceMap?: Record<string, number>,
 ): Promise<PortfolioSnapshot> {
-  const details: SnapshotDetail[] = holdings.map((h) => ({
-    accountId: h.accountId, symbol: h.symbol,
-    quantity: h.quantity, avgCost: h.avgCost,
-    value: h.quantity * h.avgCost, // 시세 없으면 취득원가 기준
-  }));
+  const details: SnapshotDetail[] = holdings.map((h) => {
+    const price = (h.code && priceMap?.[h.code]) || h.avgCost;
+    return {
+      accountId: h.accountId, symbol: h.symbol,
+      quantity: h.quantity, avgCost: h.avgCost,
+      value: h.quantity * price,
+    };
+  });
   const totalCost = details.reduce((s, d) => s + d.quantity * d.avgCost, 0);
   const totalValue = details.reduce((s, d) => s + d.value, 0);
   const cash = accounts.reduce((s, a) => s + a.cashBalance, 0);

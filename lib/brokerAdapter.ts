@@ -135,7 +135,10 @@ export async function syncBalance(
 ): Promise<{ syncedHoldings: number; updatedCash: boolean }> {
   const token = await ensureToken(adapter, credential, userId);
   const accountNo = credential.accountNoEnc ? decrypt(credential.accountNoEnc) : '';
-  const balance = await adapter.getBalance(token, accountNo, credential.extra);
+  const appKey = decrypt(credential.appKeyEnc);
+  const appSecret = decrypt(credential.appSecretEnc);
+  const extra = { ...credential.extra, accountType: credential.accountType, appKey, appSecret };
+  const balance = await adapter.getBalance(token, accountNo, extra);
 
   const { createClient } = await import('@supabase/supabase-js');
   const admin = createClient(
@@ -146,6 +149,19 @@ export async function syncBalance(
   // 예수금 갱신
   await admin.from('accounts').update({ cash_balance: balance.cash })
     .eq('id', credential.accountId);
+
+  // price_cache 갱신 (잔고 동기화 시 받아온 currentPrice 캐싱)
+  const now = new Date().toISOString();
+  for (const h of balance.holdings) {
+    if (h.currentPrice && h.code) {
+      await admin
+        .from('price_cache')
+        .upsert(
+          { ticker_code: h.code, price: h.currentPrice, fetched_at: now },
+          { onConflict: 'ticker_code' },
+        );
+    }
+  }
 
   // holdings upsert
   let syncedHoldings = 0;
@@ -223,7 +239,10 @@ export async function syncExecutions(
 ): Promise<{ syncedTrades: number; errors: string[] }> {
   const token = await ensureToken(adapter, credential, userId);
   const accountNo = credential.accountNoEnc ? decrypt(credential.accountNoEnc) : '';
-  const result = await adapter.getExecutions(token, accountNo, startDate, endDate, credential.extra);
+  const appKey = decrypt(credential.appKeyEnc);
+  const appSecret = decrypt(credential.appSecretEnc);
+  const extra = { ...credential.extra, accountType: credential.accountType, appKey, appSecret };
+  const result = await adapter.getExecutions(token, accountNo, startDate, endDate, extra);
 
   const { createClient } = await import('@supabase/supabase-js');
   const admin = createClient(

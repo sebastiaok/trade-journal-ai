@@ -71,8 +71,8 @@ export default function AccountManager({
     const yearStr = String(currentYear);
     const map: Record<string, number> = {};
     for (const t of trades) {
-      if (t.side === 'deposit' && t.executedAt.startsWith(yearStr)) {
-        map[t.accountId] = (map[t.accountId] ?? 0) + t.amount;
+      if (t.side === 'deposit' && t.executedAt?.startsWith(yearStr)) {
+        map[t.accountId] = (map[t.accountId] ?? 0) + (t.amount || 0);
       }
     }
     return map;

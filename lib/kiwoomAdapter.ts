@@ -54,16 +54,25 @@ export class KiwoomAdapter implements BrokerAdapter {
       throw new Error(`키움 토큰 발급 실패 (${res.status}): ${text}`);
     }
 
-    const json = await res.json() as {
-      access_token: string;
-      token_type: string;
-      expires_in: number;
-    };
+    const json = await res.json() as Record<string, unknown>;
 
-    return {
-      accessToken: json.access_token,
-      expiresAt: new Date(Date.now() + json.expires_in * 1000).toISOString(),
-    };
+    const accessToken = (json.access_token ?? json.token ?? '') as string;
+    if (!accessToken) {
+      throw new Error(`키움 토큰 발급 실패: 응답에 access_token 없음 — ${JSON.stringify(json)}`);
+    }
+
+    // expires_in이 초 단위 숫자이거나, expire_dt(만료일시 문자열)일 수 있음
+    let expiresAt: string;
+    if (json.expires_in && Number(json.expires_in) > 0) {
+      expiresAt = new Date(Date.now() + Number(json.expires_in) * 1000).toISOString();
+    } else if (json.expire_dt) {
+      expiresAt = new Date(String(json.expire_dt)).toISOString();
+    } else {
+      // 기본 24시간
+      expiresAt = new Date(Date.now() + 86400 * 1000).toISOString();
+    }
+
+    return { accessToken, expiresAt };
   }
 
   async getBalance(

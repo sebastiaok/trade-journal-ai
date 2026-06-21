@@ -14,6 +14,8 @@ import {
   type RestoreMode,
 } from '../../../../lib/backup';
 import { exportTradesCsv, exportAccountsCsv, exportRealizedPnlCsv } from '../../../../lib/csvExport';
+import { exportExcel } from '../../../../lib/excelExport';
+import { exportPdfReport } from '../../../../lib/pdfExport';
 
 type Tab = 'import' | 'export';
 
@@ -272,6 +274,31 @@ function ExportSection({ accounts }: { accounts: { id: string; name: string }[] 
             onClick={() => run('pnl', () => exportRealizedPnlCsv())}
           >
             {busy === 'pnl' ? '내보내는 중…' : '실현손익 CSV'}
+          </button>
+        </div>
+      </div>
+
+      <div className="settings-section">
+        <h3 className="settings-section-title">Excel / PDF 내보내기</h3>
+        <p className="settings-desc">
+          계좌별 시트가 분리된 Excel 파일 또는 투자현황 PDF 리포트를 내려받습니다.
+        </p>
+        <div className="export-buttons">
+          <button
+            type="button"
+            className="tool-btn"
+            disabled={busy !== null}
+            onClick={() => run('excel', () => exportExcel())}
+          >
+            {busy === 'excel' ? '내보내는 중…' : 'Excel 내보내기'}
+          </button>
+          <button
+            type="button"
+            className="tool-btn"
+            disabled={busy !== null}
+            onClick={() => run('pdf', () => exportPdfReport())}
+          >
+            {busy === 'pdf' ? '내보내는 중…' : 'PDF 리포트'}
           </button>
         </div>
       </div>

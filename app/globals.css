@@ -1161,6 +1161,78 @@ button { font-family: inherit; }
   font-size: 14px;
 }
 .broker-type-switch p { margin: 0 0 10px; }
+
+/* 날짜 범위 선택 */
+.broker-date-range {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.broker-date-label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.broker-date-input {
+  width: 150px;
+  font-size: 14px;
+}
+
+/* 미리보기 */
+.broker-preview {
+  margin-top: 12px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-2);
+}
+.broker-preview-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  font-size: 14px;
+}
+.broker-preview-count {
+  font-size: 12px;
+  color: var(--text-muted);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  padding: 2px 7px;
+  border-radius: 4px;
+}
+.broker-preview-empty {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin: 0;
+}
+.broker-preview-table-wrap {
+  overflow-x: auto;
+  margin: 0 -4px;
+}
+.broker-preview-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.broker-preview-table th,
+.broker-preview-table td {
+  padding: 6px 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+.broker-preview-table th {
+  font-weight: 600;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+.broker-preview-table tbody tr:hover {
+  background: color-mix(in srgb, var(--accent) 5%, transparent);
+}
+
 .form-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));

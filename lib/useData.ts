@@ -181,7 +181,7 @@ export function useData(): UseData {
     removeAnalysisNote: (id) => run(() => analysisNotesRepo.remove(id)),
     linkAnalysisTrade: (noteId, tradeId) => run(() => analysisNotesRepo.linkTrade(noteId, tradeId)),
 
-    takeSnapshot: () => run(() => takeSnapshot(holdings, accounts)),
+    takeSnapshot: () => run(() => takeSnapshot(holdings, accounts, priceMap)),
     upsertTargetAlloc: (sector, targetPct) => run(() => targetAllocationRepo.upsert(sector, targetPct)),
     removeTargetAlloc: (id) => run(() => targetAllocationRepo.remove(id)),
   };
