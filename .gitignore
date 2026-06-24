@@ -15,3 +15,6 @@ out/
 # misc
 .DS_Store
 *.pem
+
+# sync logs
+scripts/logs/

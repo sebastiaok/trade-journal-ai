@@ -24,6 +24,7 @@ const MAIN_NAV: NavItem[] = [
 const BOTTOM_NAV: NavItem[] = [
   { href: '/settings/broker', label: '증권사 연동', icon: '🔗' },
   { href: '/settings/data', label: '데이터', icon: '⚙️' },
+  { href: '/settings/guide', label: '가이드', icon: '📖' },
 ];
 
 export default function Sidebar() {

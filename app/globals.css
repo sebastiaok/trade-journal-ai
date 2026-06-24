@@ -1096,6 +1096,232 @@ button { font-family: inherit; }
   line-height: 1.5;
 }
 
+/* ───────── 가이드 페이지 ───────── */
+.guide-page { max-width: 720px; }
+
+/* 스텝 리스트 */
+.guide-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.guide-step {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+.guide-step-num {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  margin-top: 2px;
+}
+.guide-step strong {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 15px;
+}
+.guide-step .settings-desc {
+  margin-bottom: 0;
+}
+
+/* 다이어그램 */
+.guide-diagram {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 4px;
+}
+.guide-diagram-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.guide-diagram-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  font-size: 13px;
+  min-width: 100px;
+  text-align: center;
+}
+.guide-diagram-box strong { font-size: 14px; }
+.guide-diagram-box span { color: var(--text-muted); font-size: 12px; }
+.guide-diagram-local { background: color-mix(in srgb, var(--accent) 8%, var(--surface)); }
+.guide-diagram-api { background: color-mix(in srgb, #f59e0b 8%, var(--surface)); }
+.guide-diagram-db { background: color-mix(in srgb, #8b5cf6 8%, var(--surface)); }
+.guide-diagram-web { background: color-mix(in srgb, #3b82f6 8%, var(--surface)); }
+.guide-diagram-arrow {
+  font-size: 18px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+/* 테이블 */
+.guide-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  margin-top: 4px;
+}
+.guide-table th,
+.guide-table td {
+  text-align: left;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+}
+.guide-table th {
+  font-weight: 600;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+.guide-table code {
+  font-family: var(--font-mono), monospace;
+  font-size: 13px;
+  background: var(--surface-2);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+/* 코드 블록 */
+.guide-code-block {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 8px;
+  overflow-x: auto;
+}
+.guide-code-block code {
+  font-family: var(--font-mono), monospace;
+  font-size: 13px;
+  white-space: nowrap;
+  flex: 1;
+}
+.guide-code-comment {
+  width: 100%;
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: -4px;
+}
+.guide-code-block:has(.guide-code-comment) {
+  flex-wrap: wrap;
+}
+
+/* 복사 버튼 */
+.guide-copy-btn {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  font-size: 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.guide-copy-btn:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+/* 체크리스트 */
+.guide-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.guide-check-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 14px;
+  cursor: pointer;
+}
+.guide-check-item input[type="checkbox"] {
+  margin-top: 3px;
+  flex-shrink: 0;
+  accent-color: var(--accent);
+}
+.guide-check-item code {
+  font-family: var(--font-mono), monospace;
+  font-size: 13px;
+  background: var(--surface-2);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+/* 크론 항목 */
+.guide-cron-entry {
+  margin-bottom: 16px;
+}
+.guide-cron-label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 6px;
+}
+.guide-cron-label strong { font-size: 14px; }
+.guide-cron-label .muted { font-size: 13px; }
+
+/* FAQ */
+.guide-faq {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.guide-faq-item {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.guide-faq-item + .guide-faq-item { margin-top: 6px; }
+.guide-faq-q {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  padding: 14px 16px;
+  border: none;
+  background: none;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  color: var(--text);
+  line-height: 1.4;
+}
+.guide-faq-q:hover { background: var(--surface-2); }
+.guide-faq-icon {
+  flex-shrink: 0;
+  font-size: 11px;
+  margin-top: 3px;
+  color: var(--text-muted);
+}
+.guide-faq-a {
+  margin: 0;
+  padding: 0 16px 14px 36px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
 /* ───────── 증권사 연동 (BrokerSettings) ───────── */
 .broker-card {
   border: 1px solid var(--border);
