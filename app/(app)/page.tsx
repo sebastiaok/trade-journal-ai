@@ -23,6 +23,10 @@ export default function DashboardPage() {
   const data = useAppData();
   const router = useRouter();
 
+  if (data.loading) {
+    return <div className="dashboard-page"><p className="muted">데이터를 불러오는 중...</p></div>;
+  }
+
   return (
     <div className="dashboard-page">
       {data.error && <p className="dash-error" role="alert">{data.error}</p>}

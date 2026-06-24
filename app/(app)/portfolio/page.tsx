@@ -9,6 +9,10 @@ import PortfolioDashboard from '../../../components/PortfolioDashboard';
 export default function PortfolioPage() {
   const data = useAppData();
 
+  if (data.loading) {
+    return <div className="portfolio-page"><p className="muted">데이터를 불러오는 중...</p></div>;
+  }
+
   return (
     <div className="portfolio-page">
       <header className="portfolio-page-head">

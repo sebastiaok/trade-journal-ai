@@ -60,38 +60,10 @@ export async function POST(req: Request) {
       updatedCash?: boolean;
       syncedTrades?: number;
       errors: string[];
-      _debug?: unknown;
     } = { errors: [] };
 
     // 잔고 동기화
     if (body.syncType === 'balance' || body.syncType === 'all') {
-      // 디버그: kt00004 (계좌평가현황) raw 응답
-      if (cred.broker === 'kiwoom') {
-        try {
-          const { ensureToken: et } = await import('../../../../lib/brokerAdapter');
-          const tok = await et(adapter, credential, userId);
-          const acctType = credential.accountType || 'VIRTUAL';
-          const bUrl = acctType === 'REAL' ? 'https://api.kiwoom.com' : 'https://mockapi.kiwoom.com';
-          const dRes = await fetch(`${bUrl}/api/dostk/acnt`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json;charset=UTF-8',
-              authorization: `Bearer ${tok}`,
-              'api-id': 'kt00004',
-              'cont-yn': 'N',
-              'next-key': '',
-            },
-            body: JSON.stringify({
-              qry_tp: '0',
-              dmst_stex_tp: 'KRX',
-            }),
-          });
-          result._debug = { kt00004_raw: (await dRes.text()).slice(0, 4000) };
-        } catch (de) {
-          result._debug = { debugErr: de instanceof Error ? de.message : String(de) };
-        }
-      }
-
       const balResult = await syncBalance(adapter, credential, userId);
       result.syncedHoldings = balResult.syncedHoldings;
       result.updatedCash = balResult.updatedCash;
@@ -102,40 +74,6 @@ export async function POST(req: Request) {
       const today = new Date().toISOString().slice(0, 10);
       const startDate = body.startDate || today;
       const endDate = body.endDate || today;
-
-      // 디버그: ka10072 (일자별종목별실현손익) raw 응답
-      if (cred.broker === 'kiwoom') {
-        try {
-          const { decrypt: dec } = await import('../../../../lib/crypto');
-          const { ensureToken } = await import('../../../../lib/brokerAdapter');
-          const tok = await ensureToken(adapter, credential, userId);
-          const acctNo = credential.accountNoEnc ? dec(credential.accountNoEnc) : '';
-          const acctType = credential.accountType || 'VIRTUAL';
-          const bUrl = acctType === 'REAL' ? 'https://api.kiwoom.com' : 'https://mockapi.kiwoom.com';
-          const dRes = await fetch(`${bUrl}/api/dostk/acnt`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json;charset=UTF-8',
-              authorization: `Bearer ${tok}`,
-              'api-id': 'ka10072',
-              'cont-yn': 'N',
-              'next-key': '',
-            },
-            body: JSON.stringify({
-              acnt_no: acctNo,
-              pwd: credential.extra?.pwd || '',
-              strt_dt: startDate.replace(/-/g, ''),
-              end_dt: endDate.replace(/-/g, ''),
-              sell_tp: '0',
-              stex_tp: '0',
-            }),
-          });
-          const dText = await dRes.text();
-          result._debug = { ka10072_raw: dText.slice(0, 4000), startDate, endDate };
-        } catch (de) {
-          result._debug = { execDebugErr: de instanceof Error ? de.message : String(de) };
-        }
-      }
 
       const execResult = await syncExecutions(adapter, credential, userId, startDate, endDate);
       result.syncedTrades = execResult.syncedTrades;

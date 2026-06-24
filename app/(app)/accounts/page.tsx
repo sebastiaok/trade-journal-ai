@@ -42,6 +42,14 @@ export default function AccountsPage() {
 function AccountsContent() {
   const data = useAppData();
 
+  if (data.loading) {
+    return (
+      <div className="accounts-page">
+        <p className="muted">계좌 데이터를 불러오는 중...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="accounts-page">
       <header className="accounts-page-head">

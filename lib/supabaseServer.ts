@@ -13,20 +13,20 @@ const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 export async function getServerUser(req: Request): Promise<string | null> {
   const auth = req.headers.get('authorization');
   if (!auth?.startsWith('Bearer ')) {
-    console.error('[getServerUser] No Authorization header or not Bearer. Header:', auth?.slice(0, 20) ?? 'null');
+    console.error('[getServerUser] No Authorization header or not Bearer');
     return null;
   }
 
   const token = auth.slice(7);
   if (!token || token.length < 10) {
-    console.error('[getServerUser] Token too short or empty, length:', token.length);
+    console.error('[getServerUser] Token too short or empty');
     return null;
   }
 
   const client = createClient(url, serviceKey);
   const { data, error } = await client.auth.getUser(token);
   if (error || !data.user) {
-    console.error('[getServerUser] getUser failed:', error?.message ?? 'no user', 'tokenPrefix:', token.slice(0, 20));
+    console.error('[getServerUser] getUser failed:', error?.message ?? 'no user');
     return null;
   }
   return data.user.id;

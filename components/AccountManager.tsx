@@ -6,7 +6,6 @@
 
 import { useMemo, useState } from 'react';
 import type { Account, AccountType, AccountDeposit, TaxLimit, Trade } from '../data/types';
-import { isAccumulation } from '../data/types';
 
 interface Props {
   accounts: Account[];

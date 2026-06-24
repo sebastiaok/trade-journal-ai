@@ -38,6 +38,10 @@ export default function TransactionsPage() {
     [data.trades, accountId],
   );
 
+  if (data.loading) {
+    return <div className="transactions-page"><p className="muted">데이터를 불러오는 중...</p></div>;
+  }
+
   return (
     <div className="transactions-page">
       <header className="transactions-page-head">

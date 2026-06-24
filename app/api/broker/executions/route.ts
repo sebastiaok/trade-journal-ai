@@ -71,60 +71,9 @@ export async function POST(req: Request) {
       appSecret,
     };
 
-    // 디버그: ka10072 vs kt00007 raw 응답 비교
-    let _debug: Record<string, unknown> = {};
-    if (cred.broker === 'kiwoom') {
-      const acctType = credential.accountType || 'VIRTUAL';
-      const bUrl = acctType === 'REAL' ? 'https://api.kiwoom.com' : 'https://mockapi.kiwoom.com';
-      const commonHeaders = {
-        'Content-Type': 'application/json;charset=UTF-8',
-        authorization: `Bearer ${token}`,
-        'cont-yn': 'N',
-        'next-key': '',
-      };
-
-      // 1) ka10072 — 일자별종목별실현손익 (매도 실현손익만?)
-      try {
-        const r1 = await fetch(`${bUrl}/api/dostk/acnt`, {
-          method: 'POST',
-          headers: { ...commonHeaders, 'api-id': 'ka10072' },
-          body: JSON.stringify({
-            acnt_no: accountNo,
-            pwd: credential.extra?.pwd || '',
-            strt_dt: body.startDate.replace(/-/g, ''),
-            end_dt: body.endDate.replace(/-/g, ''),
-            sell_tp: '0',
-            stex_tp: '0',
-          }),
-        });
-        _debug.ka10072 = (await r1.text()).slice(0, 3000);
-      } catch (e) {
-        _debug.ka10072_err = e instanceof Error ? e.message : String(e);
-      }
-
-      // 2) kt00007 — 계좌별주문체결내역상세 (매수+매도 전체?)
-      try {
-        const r2 = await fetch(`${bUrl}/api/dostk/acnt`, {
-          method: 'POST',
-          headers: { ...commonHeaders, 'api-id': 'kt00007' },
-          body: JSON.stringify({
-            strt_dt: body.startDate.replace(/-/g, ''),
-            end_dt: body.endDate.replace(/-/g, ''),
-            qry_tp: '0',
-          }),
-        });
-        _debug.kt00007 = (await r2.text()).slice(0, 3000);
-      } catch (e) {
-        _debug.kt00007_err = e instanceof Error ? e.message : String(e);
-      }
-
-      _debug.startDate = body.startDate;
-      _debug.endDate = body.endDate;
-    }
-
     const result = await adapter.getExecutions(token, accountNo, body.startDate, body.endDate, extra);
 
-    return NextResponse.json({ ...result, _debug });
+    return NextResponse.json(result);
   } catch (e) {
     return NextResponse.json(
       { error: e instanceof Error ? e.message : '체결 조회 실패' },
