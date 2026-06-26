@@ -13,6 +13,7 @@ import type {
   TaxLimit,
   TargetAllocation,
   PriceCache,
+  Ticker,
 } from '../data/types';
 import {
   computeAssetHeader,
@@ -28,6 +29,8 @@ import {
 } from '../lib/portfolio';
 import { computeAlerts, type DashboardAlert } from '../lib/alerts';
 import { useState } from 'react';
+import Link from 'next/link';
+import AccountHoldingsList from './AccountHoldingsList';
 
 type DistView = 'ticker' | 'sector' | 'account';
 
@@ -42,6 +45,7 @@ interface Props {
   priceCache: PriceCache[];
   sectorMap: Record<string, string>;
   priceMap: Record<string, number>;
+  tickers: Ticker[];
   onNavigate: (tab: string) => void;
 }
 
@@ -56,9 +60,11 @@ export default function DashboardView({
   priceCache,
   sectorMap,
   priceMap,
+  tickers,
   onNavigate,
 }: Props) {
   const [distView, setDistView] = useState<DistView>('ticker');
+  const [expandedAcctId, setExpandedAcctId] = useState<string | null>(null);
 
   // 총자산 헤더
   const header = useMemo(
@@ -105,6 +111,9 @@ export default function DashboardView({
 
   const won = (n: number) => n.toLocaleString('ko-KR') + '원';
   const hasPriceData = priceCache.length > 0;
+  const typeLabel: Record<string, string> = {
+    general: '일반', isa: 'ISA', pension: '연금저축', irp: 'IRP', irp_dc: 'IRP(DC)',
+  };
 
   return (
     <div className="db-view">
@@ -202,9 +211,48 @@ export default function DashboardView({
           <p className="db-notice">계좌가 없습니다.</p>
         ) : (
           <div className="db-account-list">
-            {accountStatuses.map((s) => (
-              <AccountRow key={s.accountId} status={s} />
-            ))}
+            {accountStatuses.map((s) => {
+              const isOpen = expandedAcctId === s.accountId;
+              const canExpand = s.holdingCount > 0;
+              return (
+                <div key={s.accountId} className="db-acct-row">
+                  <div
+                    className={`db-acct-header${canExpand ? '' : ' disabled'}`}
+                    role={canExpand ? 'button' : undefined}
+                    tabIndex={canExpand ? 0 : undefined}
+                    onClick={() => canExpand && setExpandedAcctId(isOpen ? null : s.accountId)}
+                    onKeyDown={(e) => canExpand && e.key === 'Enter' && setExpandedAcctId(isOpen ? null : s.accountId)}
+                  >
+                    <div className="db-acct-info">
+                      {canExpand && (
+                        <span className={`db-acct-chevron${isOpen ? ' open' : ''}`}>&#9654;</span>
+                      )}
+                      <span className="db-acct-name">{s.accountName}</span>
+                      <span className="db-acct-type">{typeLabel[s.accountType] ?? s.accountType}</span>
+                    </div>
+                    <div className="db-acct-numbers">
+                      <span className="db-acct-eval">{won(s.evalAmount)}</span>
+                      <span className={`db-acct-return mono ${s.returnPct > 0 ? 'pnl-up' : s.returnPct < 0 ? 'pnl-down' : ''}`}>
+                        {s.returnPct > 0 ? '+' : ''}{s.returnPct}%
+                      </span>
+                      <span className="db-acct-count muted">{s.holdingCount}종목</span>
+                    </div>
+                  </div>
+                  {isOpen && (
+                    <div className="db-acct-expand">
+                      <AccountHoldingsList
+                        holdings={holdings.filter((h) => h.accountId === s.accountId)}
+                        priceMap={priceMap}
+                        tickers={tickers}
+                      />
+                      <div className="db-acct-detail-link">
+                        <Link href="/accounts">계좌 상세 보기 →</Link>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
       </section>
@@ -243,27 +291,6 @@ function DashDistBars({ items }: { items: WeightItem[] }) {
   );
 }
 
-function AccountRow({ status: s }: { status: AccountStatus }) {
-  const won = (n: number) => n.toLocaleString('ko-KR') + '원';
-  const typeLabel: Record<string, string> = {
-    general: '일반', isa: 'ISA', pension: '연금저축', irp: 'IRP', irp_dc: 'IRP(DC)',
-  };
-  return (
-    <div className="db-acct-row">
-      <div className="db-acct-info">
-        <span className="db-acct-name">{s.accountName}</span>
-        <span className="db-acct-type">{typeLabel[s.accountType] ?? s.accountType}</span>
-      </div>
-      <div className="db-acct-numbers">
-        <span className="db-acct-eval">{won(s.evalAmount)}</span>
-        <span className={`db-acct-return mono ${s.returnPct > 0 ? 'pnl-up' : s.returnPct < 0 ? 'pnl-down' : ''}`}>
-          {s.returnPct > 0 ? '+' : ''}{s.returnPct}%
-        </span>
-        <span className="db-acct-count muted">{s.holdingCount}종목</span>
-      </div>
-    </div>
-  );
-}
 
 function AlertCard({ alert: a, onNavigate }: { alert: DashboardAlert; onNavigate: (tab: string) => void }) {
   return (

@@ -5,13 +5,17 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import type { Account, AccountType, AccountDeposit, TaxLimit, Trade } from '../data/types';
+import type { Account, AccountType, AccountDeposit, TaxLimit, Trade, Holding, Ticker } from '../data/types';
+import AccountHoldingsList from './AccountHoldingsList';
 
 interface Props {
   accounts: Account[];
   trades: Trade[];
   deposits: AccountDeposit[];
   taxLimits: TaxLimit[];
+  holdings: Holding[];
+  priceMap: Record<string, number>;
+  tickers: Ticker[];
   onAdd: (a: Omit<Account, 'id'>) => void;
   onUpdate: (id: string, patch: Partial<Account>) => void;
   onRemove: (id: string) => void;
@@ -30,7 +34,7 @@ const TYPE_LABEL: Record<AccountType, string> = {
 const TYPES: AccountType[] = ['general', 'isa', 'pension', 'irp', 'irp_dc'];
 
 export default function AccountManager({
-  accounts, trades, deposits, taxLimits,
+  accounts, trades, deposits, taxLimits, holdings, priceMap, tickers,
   onAdd, onUpdate, onRemove, onAddDeposit, onRemoveDeposit,
 }: Props) {
   const [name, setName] = useState('');
@@ -45,6 +49,9 @@ export default function AccountManager({
   const [depositAmount, setDepositAmount] = useState('');
   const [depositKind, setDepositKind] = useState<'deposit' | 'withdraw'>('deposit');
   const [depositMemo, setDepositMemo] = useState('');
+
+  // 보유종목 패널
+  const [holdingsAcctId, setHoldingsAcctId] = useState<string | null>(null);
 
   // 계좌별 거래 수 (삭제 경고용)
   const tradeCountByAccount = useMemo(() => {
@@ -192,6 +199,7 @@ export default function AccountManager({
           {accounts.map((a) => {
             const taxInfo = getTaxInfo(a);
             const isDepositTarget = depositAcctId === a.id;
+            const isHoldingsTarget = holdingsAcctId === a.id;
             return (
               <li key={a.id} className="acctmgr-item">
                 <div className="acctmgr-item-main">
@@ -222,6 +230,11 @@ export default function AccountManager({
                     setDepositAcctId(isDepositTarget ? null : a.id);
                   }}>
                     {isDepositTarget ? '입출금 닫기' : '입출금'}
+                  </button>
+                  <button type="button" onClick={() => {
+                    setHoldingsAcctId(isHoldingsTarget ? null : a.id);
+                  }}>
+                    {isHoldingsTarget ? '보유종목 닫기' : '보유종목'}
                   </button>
                   <button type="button" onClick={() => startEdit(a)}>수정</button>
                   <button type="button" className="danger" onClick={() => handleRemove(a)}>삭제</button>
@@ -277,6 +290,17 @@ export default function AccountManager({
                       </ul>
                     )}
                   </form>
+                )}
+
+                {/* 보유종목 패널 */}
+                {isHoldingsTarget && (
+                  <div className="acctmgr-deposit">
+                    <AccountHoldingsList
+                      holdings={holdings.filter((h) => h.accountId === a.id)}
+                      priceMap={priceMap}
+                      tickers={tickers}
+                    />
+                  </div>
                 )}
               </li>
             );

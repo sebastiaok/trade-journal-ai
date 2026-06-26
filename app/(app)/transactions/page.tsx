@@ -1,16 +1,22 @@
 // app/(app)/transactions/page.tsx
 // 매매내역 — 내역 조회 + 매매 입력(4모드) + 복기/통계
+// 기간 필터 기본값 = 최근 1개월. 서버(repo)에서 기간 필터링.
 
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAppData } from '../../../components/DataProvider';
-import HistoryTable from '../../../components/HistoryTable';
+import HistoryTable, {
+  type PeriodPreset,
+  type DateRange,
+  periodToRange,
+} from '../../../components/HistoryTable';
 import ManualTradeForm from '../../../components/ManualTradeForm';
 import CaptureUploader from '../../../components/CaptureUploader';
 import TradeImportPanel from '../../../components/TradeImportPanel';
 import OpeningLotForm from '../../../components/OpeningLotForm';
 import type { Trade } from '../../../data/types';
+import { tradesRepo } from '../../../lib/repo';
 import {
   statsByPeriod,
   statsBySymbol,
@@ -33,9 +39,49 @@ export default function TransactionsPage() {
   const [subTab, setSubTab] = useState<SubTab>('history');
   const [accountId, setAccountId] = useState<string | 'all'>('all');
 
+  // 기간 필터 — 기본 최근 1개월
+  const [period, setPeriod] = useState<PeriodPreset>('1m');
+  const [dateRange, setDateRange] = useState<DateRange>(() => periodToRange('1m'));
+
+  // 서버 쿼리된 기간별 거래 목록 (opening lot 제외)
+  const [filteredTrades, setFilteredTrades] = useState<Trade[]>([]);
+  const [loadingTrades, setLoadingTrades] = useState(false);
+
+  // 기간별 거래 조회 — 서버에서 기간 필터링
+  const fetchTrades = useCallback(async (range: DateRange) => {
+    setLoadingTrades(true);
+    try {
+      const trades = await tradesRepo.listByRange(range.startDate, range.endDate);
+      setFilteredTrades(trades);
+    } catch {
+      setFilteredTrades([]);
+    } finally {
+      setLoadingTrades(false);
+    }
+  }, []);
+
+  // 초기 로드 + 기간 변경 시 재조회
+  useEffect(() => {
+    if (!data.loading) {
+      fetchTrades(dateRange);
+    }
+  }, [data.loading, dateRange, fetchTrades]);
+
+  // 거래 추가/삭제 후 재조회
+  const refreshAfterMutation = useCallback(async () => {
+    await data.reload();
+    await fetchTrades(dateRange);
+  }, [data, dateRange, fetchTrades]);
+
+  function handlePeriodChange(preset: PeriodPreset, range: DateRange) {
+    setPeriod(preset);
+    setDateRange(range);
+  }
+
+  // 복기/통계에 사용할 trades — 기간 필터 적용 + 계좌 필터
   const scopedTrades = useMemo(
-    () => (accountId === 'all' ? data.trades : data.trades.filter((t) => t.accountId === accountId)),
-    [data.trades, accountId],
+    () => (accountId === 'all' ? filteredTrades : filteredTrades.filter((t) => t.accountId === accountId)),
+    [filteredTrades, accountId],
   );
 
   if (data.loading) {
@@ -77,15 +123,29 @@ export default function TransactionsPage() {
 
       <section className="dash-body">
         {subTab === 'history' && (
-          <HistoryTable trades={data.trades} accounts={data.accounts} accountId={accountId} />
+          <HistoryTable
+            trades={filteredTrades}
+            accounts={data.accounts}
+            accountId={accountId}
+            period={period}
+            dateRange={dateRange}
+            onPeriodChange={handlePeriodChange}
+            loadingTrades={loadingTrades}
+          />
         )}
 
         {subTab === 'journal' && (
           <JournalSection
             accounts={data.accounts}
             defaultAccountId={accountId === 'all' ? undefined : accountId}
-            onSubmit={(t) => data.addTrade(t)}
-            onSubmitMany={(list) => data.addTrades(list)}
+            onSubmit={async (t) => {
+              await data.addTrade(t);
+              await fetchTrades(dateRange);
+            }}
+            onSubmitMany={async (list) => {
+              await data.addTrades(list);
+              await fetchTrades(dateRange);
+            }}
           />
         )}
 

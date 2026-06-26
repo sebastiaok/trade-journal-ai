@@ -72,7 +72,11 @@ export async function POST(req: Request) {
     // 체결 동기화
     if (body.syncType === 'executions' || body.syncType === 'all') {
       const today = new Date().toISOString().slice(0, 10);
-      const startDate = body.startDate || today;
+      // 기본 조회 기간 = 최근 1개월 (매매내역 기본 기간과 일치)
+      const defaultStart = (() => {
+        const d = new Date(); d.setMonth(d.getMonth() - 1); return d.toISOString().slice(0, 10);
+      })();
+      const startDate = body.startDate || defaultStart;
       const endDate = body.endDate || today;
 
       const execResult = await syncExecutions(adapter, credential, userId, startDate, endDate);

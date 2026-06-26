@@ -149,7 +149,10 @@ function CredentialCard({
 
   // 날짜 범�� 선택
   const today = new Date().toISOString().slice(0, 10);
-  const [startDate, setStartDate] = useState(today);
+  const oneMonthAgo = (() => {
+    const d = new Date(); d.setMonth(d.getMonth() - 1); return d.toISOString().slice(0, 10);
+  })();
+  const [startDate, setStartDate] = useState(oneMonthAgo);
   const [endDate, setEndDate] = useState(today);
 
   // 미리보기

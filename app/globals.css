@@ -77,6 +77,27 @@ button { font-family: inherit; }
 }
 .hf-clear:hover { background: var(--surface-2); color: var(--text); }
 
+/* 기간 프리셋 칩 */
+.hf-period-chips {
+  display: flex; gap: 4px; padding: 3px; background: var(--surface-2);
+  border-radius: 8px; flex-shrink: 0;
+}
+.hf-period-chip {
+  padding: 6px 12px; border: none; border-radius: 6px;
+  background: transparent; color: var(--text-muted);
+  cursor: pointer; font-size: 13px; font-weight: 500;
+  white-space: nowrap;
+}
+.hf-period-chip:hover { color: var(--text); }
+.hf-period-chip.on {
+  background: var(--surface); color: var(--text);
+  font-weight: 600; box-shadow: 0 1px 3px rgba(0,0,0,.08);
+}
+.hf-custom-range {
+  display: flex; gap: 8px; align-items: flex-end;
+  padding: 8px 0;
+}
+
 .history-summary {
   display: flex; gap: 18px; align-items: baseline;
   font-size: 14px; padding: 4px 2px;
@@ -791,10 +812,6 @@ button { font-family: inherit; }
 
 /* 계좌별 현황 */
 .db-account-list { display: flex; flex-direction: column; gap: 6px; }
-.db-acct-row {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px;
-}
 .db-acct-info { display: flex; align-items: center; gap: 8px; }
 .db-acct-name { font-weight: 600; font-size: 14px; }
 .db-acct-type {
@@ -806,6 +823,69 @@ button { font-family: inherit; }
 .db-acct-eval { font-weight: 700; font-variant-numeric: tabular-nums; }
 .db-acct-return { font-size: 13px; font-weight: 600; }
 .db-acct-count { font-size: 12px; }
+
+/* 계좌별 현황 — 펼침/접힘 */
+.db-acct-row {
+  display: flex; flex-direction: column;
+  padding: 0; border: 1px solid var(--border); border-radius: 8px;
+  overflow: hidden;
+}
+.db-acct-header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 12px; cursor: pointer; transition: background .12s;
+}
+.db-acct-header:hover { background: var(--surface-2); }
+.db-acct-header.disabled { cursor: default; }
+.db-acct-header.disabled:hover { background: transparent; }
+.db-acct-chevron {
+  font-size: 11px; color: var(--text-muted); flex-shrink: 0;
+  margin-right: 6px; transition: transform .15s;
+}
+.db-acct-chevron.open { transform: rotate(90deg); }
+.db-acct-expand {
+  border-top: 1px solid var(--border);
+  padding: 12px;
+  background: var(--surface-2);
+}
+.db-acct-detail-link {
+  margin-top: 8px; text-align: right; font-size: 12px;
+}
+.db-acct-detail-link a {
+  color: var(--accent); text-decoration: none;
+}
+.db-acct-detail-link a:hover { text-decoration: underline; }
+
+/* AccountHoldingsList 공용 */
+.ah-list { overflow-x: auto; }
+.ah-table {
+  width: 100%; border-collapse: collapse; font-size: 13px; min-width: 480px;
+}
+.ah-table thead th {
+  background: var(--surface-2); color: var(--text-muted);
+  font-weight: 600; text-align: left;
+  padding: 8px 10px; white-space: nowrap;
+  border-bottom: 1px solid var(--border);
+}
+.ah-table thead th.num { text-align: right; }
+.ah-table tbody td {
+  padding: 7px 10px; border-bottom: 1px solid var(--border); vertical-align: top;
+}
+.ah-table tbody tr:last-child td { border-bottom: none; }
+.ah-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 5%, transparent); }
+.ah-table tfoot td {
+  padding: 8px 10px; border-top: 2px solid var(--border);
+  font-size: 13px; color: var(--text);
+}
+.ah-empty {
+  padding: 24px 20px; text-align: center;
+  color: var(--text-muted); font-size: 14px; margin: 0;
+}
+.ah-empty p { margin: 0; }
+.ah-empty-hint { font-size: 12px; margin-top: 6px; }
+.ah-basis-note {
+  margin: 8px 0 0; font-size: 11px; color: var(--text-muted);
+  font-style: italic;
+}
 
 /* 알림 카드 */
 .db-alerts { display: flex; flex-direction: column; gap: 8px; }

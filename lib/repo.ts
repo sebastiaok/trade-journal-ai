@@ -367,6 +367,39 @@ export const tradesRepo = {
     if (error) throw error;
     return (data as TradeRow[]).map(toTrade);
   },
+  /** 기간 필터 조회 — 서버에서 기간 필터링, opening lot 제외 */
+  async listByRange(startDate: string, endDate: string): Promise<Trade[]> {
+    if (useLocalRepo()) {
+      return readLocal<Trade>(LOCAL_KEYS.trades)
+        .map(normalizeTrade)
+        .filter((t) => t.source !== 'opening')
+        .filter((t) => t.executedAt.slice(0, 10) >= startDate && t.executedAt.slice(0, 10) <= endDate)
+        .sort((a, b) => b.executedAt.localeCompare(a.executedAt));
+    }
+    const { data, error } = await supabase
+      .from('trades').select('*')
+      .neq('source', 'opening')
+      .gte('executed_at', startDate)
+      .lte('executed_at', endDate + 'T23:59:59')
+      .order('executed_at', { ascending: false });
+    if (error) throw error;
+    return (data as TradeRow[]).map(toTrade);
+  },
+  /** 전체 조회 — opening lot 제외 */
+  async listExcludeOpening(): Promise<Trade[]> {
+    if (useLocalRepo()) {
+      return readLocal<Trade>(LOCAL_KEYS.trades)
+        .map(normalizeTrade)
+        .filter((t) => t.source !== 'opening')
+        .sort((a, b) => b.executedAt.localeCompare(a.executedAt));
+    }
+    const { data, error } = await supabase
+      .from('trades').select('*')
+      .neq('source', 'opening')
+      .order('executed_at', { ascending: false });
+    if (error) throw error;
+    return (data as TradeRow[]).map(toTrade);
+  },
   async add(t: Omit<Trade, 'id'>): Promise<Trade> {
     if (useLocalRepo()) {
       const rows = readLocal<Trade>(LOCAL_KEYS.trades);

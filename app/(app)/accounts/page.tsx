@@ -64,6 +64,9 @@ function AccountsContent() {
         trades={data.trades}
         deposits={data.deposits}
         taxLimits={data.taxLimits}
+        holdings={data.holdings}
+        priceMap={data.priceMap}
+        tickers={data.tickers}
         onAdd={(a) => data.addAccount(a)}
         onUpdate={(id, patch) => data.updateAccount(id, patch)}
         onRemove={(id) => data.removeAccount(id)}

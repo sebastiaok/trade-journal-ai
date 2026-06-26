@@ -42,6 +42,7 @@ export default function DashboardPage() {
         priceCache={data.priceCache}
         sectorMap={data.sectorMap}
         priceMap={data.priceMap}
+        tickers={data.tickers}
         onNavigate={(tab) => router.push(TAB_TO_ROUTE[tab] ?? '/')}
       />
     </div>
