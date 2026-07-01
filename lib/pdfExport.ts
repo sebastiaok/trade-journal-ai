@@ -8,7 +8,7 @@ import { accountsRepo, holdingsRepo, realizedPnlRepo, snapshotsRepo, tickersRepo
 import type { Account, Holding, RealizedPnlRow, PortfolioSnapshot, Ticker, PriceCache } from '../data/types';
 
 const TYPE_LABEL: Record<string, string> = {
-  general: '일반', isa: 'ISA', pension: '연금저축', irp: 'IRP', irp_dc: 'IRP(DC)',
+  general: '일반', isa: 'ISA', pension: '연금저축', irp: 'IRP', irp_dc: 'IRP(DC)', dc: 'DC(확정기여)',
 };
 
 /**

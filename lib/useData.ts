@@ -8,8 +8,8 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { accountsRepo, tradesRepo, checksRepo, depositsRepo, taxLimitsRepo, holdingsRepo, realizedPnlRepo, analysisNotesRepo, snapshotsRepo, targetAllocationRepo, tickersRepo, priceCacheRepo, saveTrade, takeSnapshot } from './repo';
-import type { Account, Trade, InvestCheck, AccountDeposit, TaxLimit, Holding, RealizedPnlRow, AnalysisNote, PortfolioSnapshot, TargetAllocation, Ticker, PriceCache } from '../data/types';
+import { accountsRepo, tradesRepo, checksRepo, depositsRepo, taxLimitsRepo, holdingsRepo, realizedPnlRepo, analysisNotesRepo, snapshotsRepo, targetAllocationRepo, tickersRepo, priceCacheRepo, saveTrade, takeSnapshot, pensionAssetClassesRepo, pensionHoldingsRepo, pensionPlansRepo, pensionRiskLimitsRepo } from './repo';
+import type { Account, Trade, InvestCheck, AccountDeposit, TaxLimit, Holding, RealizedPnlRow, AnalysisNote, PortfolioSnapshot, TargetAllocation, Ticker, PriceCache, PensionAssetClass, PensionHolding, PensionRebalancePlan, PensionRiskLimit } from '../data/types';
 
 export interface UseData {
   loading: boolean;
@@ -56,6 +56,18 @@ export interface UseData {
   takeSnapshot: () => Promise<void>;
   upsertTargetAlloc: (sector: string, targetPct: number) => Promise<void>;
   removeTargetAlloc: (id: string) => Promise<void>;
+
+  // 퇴직연금 (Phase 9)
+  pensionAssetClasses: PensionAssetClass[];
+  pensionHoldings: PensionHolding[];
+  pensionPlans: PensionRebalancePlan[];
+  pensionRiskLimits: PensionRiskLimit[];
+  upsertPensionHoldings: (accountId: string, holdings: Omit<PensionHolding, 'id' | 'updatedAt'>[]) => Promise<void>;
+  addPensionPlan: (plan: Omit<PensionRebalancePlan, 'id' | 'createdAt'>) => Promise<void>;
+  removePensionPlan: (id: string) => Promise<void>;
+  addPensionAssetClass: (name: string, riskType: 'risky' | 'safe') => Promise<void>;
+  updatePensionAssetClass: (id: string, patch: Partial<{ name: string; riskType: 'risky' | 'safe' }>) => Promise<void>;
+  removePensionAssetClass: (id: string) => Promise<void>;
 }
 
 export function useData(): UseData {
@@ -76,10 +88,16 @@ export function useData(): UseData {
   const [sectorMap, setSectorMap] = useState<Record<string, string>>({});
   const [priceMap, setPriceMap] = useState<Record<string, number>>({});
 
+  // 퇴직연금
+  const [pensionAssetClasses, setPensionAssetClasses] = useState<PensionAssetClass[]>([]);
+  const [pensionHoldings, setPensionHoldings] = useState<PensionHolding[]>([]);
+  const [pensionPlans, setPensionPlans] = useState<PensionRebalancePlan[]>([]);
+  const [pensionRiskLimits, setPensionRiskLimits] = useState<PensionRiskLimit[]>([]);
+
   const reload = useCallback(async () => {
     setError(null);
     try {
-      const [a, t, c, d, tl, h, rp, an, sn, ta, tk, pc] = await Promise.all([
+      const [a, t, c, d, tl, h, rp, an, sn, ta, tk, pc, pac, ph, pp, prl] = await Promise.all([
         accountsRepo.list(),
         tradesRepo.list(),
         checksRepo.list(),
@@ -92,6 +110,10 @@ export function useData(): UseData {
         targetAllocationRepo.list(),
         tickersRepo.list(),
         priceCacheRepo.list(),
+        pensionAssetClassesRepo.list(),
+        pensionHoldingsRepo.list(),
+        pensionPlansRepo.list(),
+        pensionRiskLimitsRepo.list(),
       ]);
       setAccounts(a);
       setTrades(t);
@@ -105,6 +127,10 @@ export function useData(): UseData {
       setTargetAllocation(ta);
       setTickers(tk);
       setPriceCache(pc);
+      setPensionAssetClasses(pac);
+      setPensionHoldings(ph);
+      setPensionPlans(pp);
+      setPensionRiskLimits(prl);
       // 섹터맵: ticker name/code → sector
       const sm: Record<string, string> = {};
       for (const x of tk) { if (x.sector) { sm[x.name] = x.sector; sm[x.code] = x.sector; } }
@@ -184,5 +210,17 @@ export function useData(): UseData {
     takeSnapshot: () => run(() => takeSnapshot(holdings, accounts, priceMap)),
     upsertTargetAlloc: (sector, targetPct) => run(() => targetAllocationRepo.upsert(sector, targetPct)),
     removeTargetAlloc: (id) => run(() => targetAllocationRepo.remove(id)),
+
+    // 퇴직연금
+    pensionAssetClasses,
+    pensionHoldings,
+    pensionPlans,
+    pensionRiskLimits,
+    upsertPensionHoldings: (accountId, h) => run(() => pensionHoldingsRepo.upsertAll(accountId, h)),
+    addPensionPlan: (plan) => run(() => pensionPlansRepo.add(plan)),
+    removePensionPlan: (id) => run(() => pensionPlansRepo.remove(id)),
+    addPensionAssetClass: (name, riskType) => run(() => pensionAssetClassesRepo.add(name, riskType)),
+    updatePensionAssetClass: (id, patch) => run(() => pensionAssetClassesRepo.update(id, patch)),
+    removePensionAssetClass: (id) => run(() => pensionAssetClassesRepo.remove(id)),
   };
 }

@@ -12,31 +12,6 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
       account_deposits: {
@@ -118,6 +93,153 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      analysis_notes: {
+        Row: {
+          account_id: string
+          analyzed_at: string
+          checklist: Json | null
+          closed_at: string | null
+          code: string | null
+          created_at: string
+          id: string
+          owner: string
+          retro_label: string | null
+          retro_memo: string | null
+          status: string
+          stop_price: number | null
+          symbol: string
+          target_pct: number | null
+          target_price: number | null
+          thesis: string | null
+        }
+        Insert: {
+          account_id: string
+          analyzed_at?: string
+          checklist?: Json | null
+          closed_at?: string | null
+          code?: string | null
+          created_at?: string
+          id?: string
+          owner: string
+          retro_label?: string | null
+          retro_memo?: string | null
+          status?: string
+          stop_price?: number | null
+          symbol: string
+          target_pct?: number | null
+          target_price?: number | null
+          thesis?: string | null
+        }
+        Update: {
+          account_id?: string
+          analyzed_at?: string
+          checklist?: Json | null
+          closed_at?: string | null
+          code?: string | null
+          created_at?: string
+          id?: string
+          owner?: string
+          retro_label?: string | null
+          retro_memo?: string | null
+          status?: string
+          stop_price?: number | null
+          symbol?: string
+          target_pct?: number | null
+          target_price?: number | null
+          thesis?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "analysis_notes_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      broker_credentials: {
+        Row: {
+          account_id: string
+          account_no_enc: string | null
+          account_type: string
+          app_key_enc: string
+          app_secret_enc: string
+          broker: string
+          created_at: string
+          extra: Json | null
+          id: string
+          owner: string
+        }
+        Insert: {
+          account_id: string
+          account_no_enc?: string | null
+          account_type?: string
+          app_key_enc: string
+          app_secret_enc: string
+          broker: string
+          created_at?: string
+          extra?: Json | null
+          id?: string
+          owner: string
+        }
+        Update: {
+          account_id?: string
+          account_no_enc?: string | null
+          account_type?: string
+          app_key_enc?: string
+          app_secret_enc?: string
+          broker?: string
+          created_at?: string
+          extra?: Json | null
+          id?: string
+          owner?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "broker_credentials_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      broker_token_cache: {
+        Row: {
+          access_token_enc: string
+          created_at: string
+          cred_id: string
+          expires_at: string
+          id: string
+          owner: string
+        }
+        Insert: {
+          access_token_enc: string
+          created_at?: string
+          cred_id: string
+          expires_at: string
+          id?: string
+          owner: string
+        }
+        Update: {
+          access_token_enc?: string
+          created_at?: string
+          cred_id?: string
+          expires_at?: string
+          id?: string
+          owner?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "broker_token_cache_cred_id_fkey"
+            columns: ["cred_id"]
+            isOneToOne: false
+            referencedRelation: "broker_credentials"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       holdings: {
         Row: {
@@ -219,6 +341,220 @@ export type Database = {
           },
         ]
       }
+      pension_asset_classes: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          risk_type: string
+          sort_order: number
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          risk_type: string
+          sort_order?: number
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          risk_type?: string
+          sort_order?: number
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      pension_holdings: {
+        Row: {
+          account_id: string
+          asset_class_id: string | null
+          created_at: string
+          eval_amount: number
+          id: string
+          product_name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_id: string
+          asset_class_id?: string | null
+          created_at?: string
+          eval_amount?: number
+          id?: string
+          product_name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string
+          asset_class_id?: string | null
+          created_at?: string
+          eval_amount?: number
+          id?: string
+          product_name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pension_holdings_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pension_holdings_asset_class_id_fkey"
+            columns: ["asset_class_id"]
+            isOneToOne: false
+            referencedRelation: "pension_asset_classes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pension_rebalance_plans: {
+        Row: {
+          account_id: string
+          created_at: string
+          extra_contrib: number
+          id: string
+          limit_ok: boolean | null
+          limit_pct: number | null
+          memo: string | null
+          planned_at: string
+          risky_ratio: number | null
+          target_alloc: Json
+          total_amount: number
+          user_id: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          extra_contrib?: number
+          id?: string
+          limit_ok?: boolean | null
+          limit_pct?: number | null
+          memo?: string | null
+          planned_at?: string
+          risky_ratio?: number | null
+          target_alloc: Json
+          total_amount: number
+          user_id: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          extra_contrib?: number
+          id?: string
+          limit_ok?: boolean | null
+          limit_pct?: number | null
+          memo?: string | null
+          planned_at?: string
+          risky_ratio?: number | null
+          target_alloc?: Json
+          total_amount?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pension_rebalance_plans_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pension_risk_limits: {
+        Row: {
+          account_type: string
+          created_at: string
+          id: string
+          note: string | null
+          risky_limit_pct: number
+          year: number
+        }
+        Insert: {
+          account_type: string
+          created_at?: string
+          id?: string
+          note?: string | null
+          risky_limit_pct: number
+          year: number
+        }
+        Update: {
+          account_type?: string
+          created_at?: string
+          id?: string
+          note?: string | null
+          risky_limit_pct?: number
+          year?: number
+        }
+        Relationships: []
+      }
+      portfolio_snapshots: {
+        Row: {
+          cash: number
+          created_at: string
+          details: Json | null
+          id: string
+          owner: string
+          snapshot_date: string
+          total_cost: number
+          total_value: number
+        }
+        Insert: {
+          cash?: number
+          created_at?: string
+          details?: Json | null
+          id?: string
+          owner: string
+          snapshot_date: string
+          total_cost: number
+          total_value: number
+        }
+        Update: {
+          cash?: number
+          created_at?: string
+          details?: Json | null
+          id?: string
+          owner?: string
+          snapshot_date?: string
+          total_cost?: number
+          total_value?: number
+        }
+        Relationships: []
+      }
+      price_cache: {
+        Row: {
+          fetched_at: string
+          price: number
+          ticker_code: string
+        }
+        Insert: {
+          fetched_at?: string
+          price: number
+          ticker_code: string
+        }
+        Update: {
+          fetched_at?: string
+          price?: number
+          ticker_code?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "price_cache_ticker_code_fkey"
+            columns: ["ticker_code"]
+            isOneToOne: true
+            referencedRelation: "tickers"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
       realized_pnl: {
         Row: {
           account_id: string
@@ -291,6 +627,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      target_allocation: {
+        Row: {
+          id: string
+          owner: string
+          sector: string
+          target_pct: number
+        }
+        Insert: {
+          id?: string
+          owner: string
+          sector: string
+          target_pct: number
+        }
+        Update: {
+          id?: string
+          owner?: string
+          sector?: string
+          target_pct?: number
+        }
+        Relationships: []
       }
       tax_config: {
         Row: {
@@ -407,6 +764,7 @@ export type Database = {
         Row: {
           account_id: string
           amount: number
+          analysis_id: string | null
           broker: string | null
           code: string | null
           confidence: number | null
@@ -431,6 +789,7 @@ export type Database = {
         Insert: {
           account_id: string
           amount?: number
+          analysis_id?: string | null
           broker?: string | null
           code?: string | null
           confidence?: number | null
@@ -455,6 +814,7 @@ export type Database = {
         Update: {
           account_id?: string
           amount?: number
+          analysis_id?: string | null
           broker?: string | null
           code?: string | null
           confidence?: number | null
@@ -484,6 +844,13 @@ export type Database = {
             referencedRelation: "accounts"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "trades_analysis_id_fkey"
+            columns: ["analysis_id"]
+            isOneToOne: false
+            referencedRelation: "analysis_notes"
+            referencedColumns: ["id"]
+          },
         ]
       }
     }
@@ -497,7 +864,7 @@ export type Database = {
       }
     }
     Enums: {
-      account_type: "general" | "isa" | "pension" | "irp" | "irp_dc"
+      account_type: "general" | "isa" | "pension" | "irp" | "irp_dc" | "dc"
       trade_side: "buy" | "sell" | "deposit" | "withdrawal"
       trade_source: "vision" | "manual" | "opening" | "api"
     }
@@ -625,12 +992,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {
-      account_type: ["general", "isa", "pension", "irp", "irp_dc"],
+      account_type: ["general", "isa", "pension", "irp", "irp_dc", "dc"],
       trade_side: ["buy", "sell", "deposit", "withdrawal"],
       trade_source: ["vision", "manual", "opening", "api"],
     },

@@ -29,9 +29,10 @@ const TYPE_LABEL: Record<AccountType, string> = {
   pension: '연금저축',
   irp: 'IRP(자기부담)',
   irp_dc: 'IRP(DC전환)',
+  dc: 'DC(확정기여형)',
 };
 
-const TYPES: AccountType[] = ['general', 'isa', 'pension', 'irp', 'irp_dc'];
+const TYPES: AccountType[] = ['general', 'isa', 'pension', 'irp', 'irp_dc', 'dc'];
 
 export default function AccountManager({
   accounts, trades, deposits, taxLimits, holdings, priceMap, tickers,

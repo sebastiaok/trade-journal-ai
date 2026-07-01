@@ -19,6 +19,7 @@ const MAIN_NAV: NavItem[] = [
   { href: '/transactions', label: '매매내역', icon: '📝' },
   { href: '/analysis', label: '종목 분석', icon: '🔍' },
   { href: '/portfolio', label: '포트폴리오', icon: '💼' },
+  { href: '/pension', label: '퇴직연금', icon: '🏛️' },
 ];
 
 const BOTTOM_NAV: NavItem[] = [

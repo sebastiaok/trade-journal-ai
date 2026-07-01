@@ -1032,6 +1032,7 @@ button { font-family: inherit; }
 .transactions-page,
 .analysis-page,
 .portfolio-page,
+.pension-page,
 .settings-page,
 .dashboard-page {
   max-width: 1080px;
@@ -1046,6 +1047,7 @@ button { font-family: inherit; }
 .transactions-page-head,
 .analysis-page-head,
 .portfolio-page-head,
+.pension-page-head,
 .settings-page-head {
   display: flex;
   align-items: center;
@@ -1059,6 +1061,7 @@ button { font-family: inherit; }
 .transactions-page-title,
 .analysis-page-title,
 .portfolio-page-title,
+.pension-page-title,
 .settings-page-title {
   font-size: 20px;
   font-weight: 700;

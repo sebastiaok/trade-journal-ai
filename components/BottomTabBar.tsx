@@ -18,6 +18,7 @@ const TABS: TabItem[] = [
   { href: '/transactions', label: '매매', icon: '📝' },
   { href: '/analysis', label: '분석', icon: '🔍' },
   { href: '/portfolio', label: '포트폴리오', icon: '💼' },
+  { href: '/pension', label: '퇴직연금', icon: '🏛️' },
 ];
 
 export default function BottomTabBar() {

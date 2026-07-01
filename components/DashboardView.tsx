@@ -112,7 +112,7 @@ export default function DashboardView({
   const won = (n: number) => n.toLocaleString('ko-KR') + '원';
   const hasPriceData = priceCache.length > 0;
   const typeLabel: Record<string, string> = {
-    general: '일반', isa: 'ISA', pension: '연금저축', irp: 'IRP', irp_dc: 'IRP(DC)',
+    general: '일반', isa: 'ISA', pension: '연금저축', irp: 'IRP', irp_dc: 'IRP(DC)', dc: 'DC(확정기여)',
   };
 
   return (

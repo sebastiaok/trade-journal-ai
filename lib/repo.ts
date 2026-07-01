@@ -5,7 +5,7 @@
 
 import { isImplementationMode } from './devMode';
 import { isSupabaseConfigured, supabase } from './supabase';
-import type { Account, Trade, InvestCheck, ReviewNote, AccountType, Side, Source, AccountDeposit, TaxLimit, Holding, RealizedPnlRow, AnalysisNote, AnalysisStatus, PortfolioSnapshot, SnapshotDetail, TargetAllocation, Ticker, PriceCache, BrokerCredential, BrokerTokenCache } from '../data/types';
+import type { Account, Trade, InvestCheck, ReviewNote, AccountType, Side, Source, AccountDeposit, TaxLimit, Holding, RealizedPnlRow, AnalysisNote, AnalysisStatus, PortfolioSnapshot, SnapshotDetail, TargetAllocation, Ticker, PriceCache, BrokerCredential, BrokerTokenCache, PensionAssetClass, PensionHolding, PensionRebalancePlan, PensionAllocItem, PensionRiskLimit } from '../data/types';
 
 const LOCAL_KEYS = {
   accounts: 'tja-dev-accounts',
@@ -20,6 +20,10 @@ const LOCAL_KEYS = {
   targetAllocation: 'tja-dev-target-alloc',
   tickers: 'tja-dev-tickers',
   priceCache: 'tja-dev-price-cache',
+  pensionAssetClasses: 'tja-dev-pension-asset-classes',
+  pensionHoldings: 'tja-dev-pension-holdings',
+  pensionPlans: 'tja-dev-pension-plans',
+  pensionRiskLimits: 'tja-dev-pension-risk-limits',
 } as const;
 
 function useLocalRepo(): boolean {
@@ -1216,5 +1220,239 @@ export const brokerTokenCacheRepo = {
     const { error } = await supabase
       .from('broker_token_cache').delete().eq('cred_id', credId);
     if (error) throw error;
+  },
+};
+
+/* ───────── 퇴직연금 DC/IRP (Phase 9) ───────── */
+
+interface PensionAssetClassRow {
+  id: string; user_id: string | null; name: string;
+  risk_type: 'risky' | 'safe'; sort_order: number;
+}
+interface PensionHoldingRow {
+  id: string; user_id: string; account_id: string;
+  product_name: string; asset_class_id: string | null;
+  eval_amount: number; updated_at: string;
+}
+interface PensionPlanRow {
+  id: string; user_id: string; account_id: string;
+  total_amount: number; extra_contrib: number;
+  target_alloc: PensionAllocItem[]; risky_ratio: number | null;
+  limit_pct: number | null; limit_ok: boolean | null;
+  memo: string | null; planned_at: string; created_at: string;
+}
+interface PensionRiskLimitRow {
+  id: string; account_type: string; year: number;
+  risky_limit_pct: number; note: string | null;
+}
+
+const toPensionAssetClass = (r: PensionAssetClassRow): PensionAssetClass => ({
+  id: r.id, userId: r.user_id ?? undefined, name: r.name,
+  riskType: r.risk_type, sortOrder: r.sort_order,
+});
+const toPensionHolding = (r: PensionHoldingRow): PensionHolding => ({
+  id: r.id, accountId: r.account_id,
+  productName: r.product_name,
+  assetClassId: r.asset_class_id ?? undefined,
+  evalAmount: Number(r.eval_amount), updatedAt: r.updated_at,
+});
+const toPensionPlan = (r: PensionPlanRow): PensionRebalancePlan => ({
+  id: r.id, accountId: r.account_id,
+  totalAmount: Number(r.total_amount),
+  extraContrib: Number(r.extra_contrib),
+  targetAlloc: r.target_alloc ?? [],
+  riskyRatio: r.risky_ratio != null ? Number(r.risky_ratio) : undefined,
+  limitPct: r.limit_pct != null ? Number(r.limit_pct) : undefined,
+  limitOk: r.limit_ok ?? undefined,
+  memo: r.memo ?? undefined,
+  plannedAt: r.planned_at, createdAt: r.created_at,
+});
+const toPensionRiskLimit = (r: PensionRiskLimitRow): PensionRiskLimit => ({
+  id: r.id, accountType: r.account_type, year: r.year,
+  riskyLimitPct: Number(r.risky_limit_pct), note: r.note ?? undefined,
+});
+
+/** 기본 자산군 시드 (로컬 모드용) */
+const DEFAULT_ASSET_CLASSES: PensionAssetClass[] = [
+  { id: 'pac-1', name: '국내주식형', riskType: 'risky', sortOrder: 1 },
+  { id: 'pac-2', name: '해외주식형', riskType: 'risky', sortOrder: 2 },
+  { id: 'pac-3', name: '혼합형',     riskType: 'risky', sortOrder: 3 },
+  { id: 'pac-4', name: '채권형',     riskType: 'safe',  sortOrder: 4 },
+  { id: 'pac-5', name: 'TDF',        riskType: 'risky', sortOrder: 5 },
+  { id: 'pac-6', name: '원리금보장', riskType: 'safe',  sortOrder: 6 },
+  { id: 'pac-7', name: '현금성',     riskType: 'safe',  sortOrder: 7 },
+];
+
+export const pensionAssetClassesRepo = {
+  async list(): Promise<PensionAssetClass[]> {
+    if (useLocalRepo()) {
+      const custom = readLocal<PensionAssetClass>(LOCAL_KEYS.pensionAssetClasses);
+      return [...DEFAULT_ASSET_CLASSES, ...custom].sort((a, b) => a.sortOrder - b.sortOrder);
+    }
+    const { data, error } = await supabase
+      .from('pension_asset_classes').select('*').order('sort_order');
+    if (error) throw error;
+    return (data as PensionAssetClassRow[]).map(toPensionAssetClass);
+  },
+  async add(name: string, riskType: 'risky' | 'safe', sortOrder = 99): Promise<PensionAssetClass> {
+    if (useLocalRepo()) {
+      const rows = readLocal<PensionAssetClass>(LOCAL_KEYS.pensionAssetClasses);
+      const created: PensionAssetClass = { id: localId(), name, riskType, sortOrder };
+      writeLocal(LOCAL_KEYS.pensionAssetClasses, [...rows, created]);
+      return created;
+    }
+    const owner = await uid();
+    const { data, error } = await supabase
+      .from('pension_asset_classes')
+      .insert({ user_id: owner, name, risk_type: riskType, sort_order: sortOrder })
+      .select().single();
+    if (error) throw error;
+    return toPensionAssetClass(data as PensionAssetClassRow);
+  },
+  async update(id: string, patch: Partial<{ name: string; riskType: 'risky' | 'safe'; sortOrder: number }>): Promise<void> {
+    if (useLocalRepo()) {
+      const rows = readLocal<PensionAssetClass>(LOCAL_KEYS.pensionAssetClasses).map((r) =>
+        r.id === id ? { ...r, ...patch } : r
+      );
+      writeLocal(LOCAL_KEYS.pensionAssetClasses, rows);
+      return;
+    }
+    const row: Record<string, unknown> = {};
+    if (patch.name !== undefined) row.name = patch.name;
+    if (patch.riskType !== undefined) row.risk_type = patch.riskType;
+    if (patch.sortOrder !== undefined) row.sort_order = patch.sortOrder;
+    const { error } = await supabase.from('pension_asset_classes').update(row).eq('id', id);
+    if (error) throw error;
+  },
+  async remove(id: string): Promise<void> {
+    if (useLocalRepo()) {
+      writeLocal(LOCAL_KEYS.pensionAssetClasses,
+        readLocal<PensionAssetClass>(LOCAL_KEYS.pensionAssetClasses).filter((r) => r.id !== id));
+      return;
+    }
+    const { error } = await supabase.from('pension_asset_classes').delete().eq('id', id);
+    if (error) throw error;
+  },
+};
+
+export const pensionHoldingsRepo = {
+  async list(accountId?: string): Promise<PensionHolding[]> {
+    if (useLocalRepo()) {
+      const all = readLocal<PensionHolding>(LOCAL_KEYS.pensionHoldings);
+      return accountId ? all.filter((h) => h.accountId === accountId) : all;
+    }
+    let q = supabase.from('pension_holdings').select('*').order('updated_at', { ascending: false });
+    if (accountId) q = q.eq('account_id', accountId);
+    const { data, error } = await q;
+    if (error) throw error;
+    return (data as PensionHoldingRow[]).map(toPensionHolding);
+  },
+  async upsertAll(accountId: string, holdings: Omit<PensionHolding, 'id' | 'updatedAt'>[]): Promise<void> {
+    if (useLocalRepo()) {
+      // 해당 계좌의 기존 보유를 교체
+      const others = readLocal<PensionHolding>(LOCAL_KEYS.pensionHoldings)
+        .filter((h) => h.accountId !== accountId);
+      const created = holdings.map((h) => ({
+        ...h, id: localId(), updatedAt: new Date().toISOString(),
+      }));
+      writeLocal(LOCAL_KEYS.pensionHoldings, [...others, ...created]);
+      return;
+    }
+    const owner = await uid();
+    // 기존 삭제 후 재삽입
+    await supabase.from('pension_holdings').delete().eq('account_id', accountId);
+    if (holdings.length > 0) {
+      const rows = holdings.map((h) => ({
+        user_id: owner, account_id: accountId,
+        product_name: h.productName,
+        asset_class_id: h.assetClassId ?? null,
+        eval_amount: h.evalAmount,
+      }));
+      const { error } = await supabase.from('pension_holdings').insert(rows);
+      if (error) throw error;
+    }
+  },
+  async remove(id: string): Promise<void> {
+    if (useLocalRepo()) {
+      writeLocal(LOCAL_KEYS.pensionHoldings,
+        readLocal<PensionHolding>(LOCAL_KEYS.pensionHoldings).filter((h) => h.id !== id));
+      return;
+    }
+    const { error } = await supabase.from('pension_holdings').delete().eq('id', id);
+    if (error) throw error;
+  },
+};
+
+export const pensionPlansRepo = {
+  async list(accountId?: string): Promise<PensionRebalancePlan[]> {
+    if (useLocalRepo()) {
+      const all = readLocal<PensionRebalancePlan>(LOCAL_KEYS.pensionPlans);
+      const filtered = accountId ? all.filter((p) => p.accountId === accountId) : all;
+      return filtered.sort((a, b) => b.plannedAt.localeCompare(a.plannedAt));
+    }
+    let q = supabase.from('pension_rebalance_plans').select('*').order('planned_at', { ascending: false });
+    if (accountId) q = q.eq('account_id', accountId);
+    const { data, error } = await q;
+    if (error) throw error;
+    return (data as PensionPlanRow[]).map(toPensionPlan);
+  },
+  async add(plan: Omit<PensionRebalancePlan, 'id' | 'createdAt'>): Promise<PensionRebalancePlan> {
+    if (useLocalRepo()) {
+      const rows = readLocal<PensionRebalancePlan>(LOCAL_KEYS.pensionPlans);
+      const created: PensionRebalancePlan = { ...plan, id: localId(), createdAt: new Date().toISOString() };
+      writeLocal(LOCAL_KEYS.pensionPlans, [created, ...rows]);
+      return created;
+    }
+    const owner = await uid();
+    const { data, error } = await supabase
+      .from('pension_rebalance_plans')
+      .insert({
+        user_id: owner, account_id: plan.accountId,
+        total_amount: plan.totalAmount, extra_contrib: plan.extraContrib,
+        target_alloc: plan.targetAlloc as unknown as Record<string, unknown>[],
+        risky_ratio: plan.riskyRatio ?? null,
+        limit_pct: plan.limitPct ?? null,
+        limit_ok: plan.limitOk ?? null,
+        memo: plan.memo ?? null,
+        planned_at: plan.plannedAt,
+      })
+      .select().single();
+    if (error) throw error;
+    return toPensionPlan(data as PensionPlanRow);
+  },
+  async remove(id: string): Promise<void> {
+    if (useLocalRepo()) {
+      writeLocal(LOCAL_KEYS.pensionPlans,
+        readLocal<PensionRebalancePlan>(LOCAL_KEYS.pensionPlans).filter((p) => p.id !== id));
+      return;
+    }
+    const { error } = await supabase.from('pension_rebalance_plans').delete().eq('id', id);
+    if (error) throw error;
+  },
+};
+
+export const pensionRiskLimitsRepo = {
+  async list(): Promise<PensionRiskLimit[]> {
+    if (useLocalRepo()) {
+      return readLocal<PensionRiskLimit>(LOCAL_KEYS.pensionRiskLimits);
+    }
+    const { data, error } = await supabase
+      .from('pension_risk_limits').select('*').order('year', { ascending: false });
+    if (error) throw error;
+    return (data as PensionRiskLimitRow[]).map(toPensionRiskLimit);
+  },
+  /** 현재 연도의 한도를 account_type으로 조회 */
+  async getLimit(accountType: string, year?: number): Promise<number | null> {
+    const y = year ?? new Date().getFullYear();
+    if (useLocalRepo()) {
+      const all = readLocal<PensionRiskLimit>(LOCAL_KEYS.pensionRiskLimits);
+      const found = all.find((r) => r.accountType === accountType && r.year === y);
+      return found ? found.riskyLimitPct : null;
+    }
+    const { data, error } = await supabase
+      .from('pension_risk_limits').select('risky_limit_pct')
+      .eq('account_type', accountType).eq('year', y).maybeSingle();
+    if (error) throw error;
+    return data ? Number(data.risky_limit_pct) : null;
   },
 };

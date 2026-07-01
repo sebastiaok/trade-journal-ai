@@ -317,3 +317,148 @@
 .trt-actions { display: flex; justify-content: flex-end; gap: 8px; }
 .trt-cancel { padding: 10px 18px; border: 1px solid var(--border); border-radius: 8px; background: transparent; color: var(--text-muted); cursor: pointer; font-size: 14px; }
 .trt-save { padding: 10px 22px; border: none; border-radius: 8px; background: var(--accent, #2E7D6F); color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; }
+
+/* ═══════════════════════════════════════════════════════
+ * 퇴직연금 (PensionDashboard)
+ * ═══════════════════════════════════════════════════════ */
+
+.pen-dash { display: flex; flex-direction: column; gap: 20px; }
+
+/* 퇴직연금 탭 색상 */
+.dash-tab.tab-current.on { border-bottom-color: #2E7D6F; color: #2E7D6F; }
+.dash-tab.tab-simulate.on { border-bottom-color: #B85C1F; color: #B85C1F; }
+.dash-tab.tab-history.on { border-bottom-color: #1A73A7; color: #1A73A7; }
+.dash-tab.tab-settings.on { border-bottom-color: #6B7280; color: #6B7280; }
+
+/* 섹션 */
+.pen-section { display: flex; flex-direction: column; gap: 16px; }
+.pen-section h3 { font-size: 16px; font-weight: 600; margin: 0; }
+
+/* 요약 카드 */
+.pen-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
+.pen-card { padding: 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+.pen-card-label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 4px; }
+.pen-card-value { display: block; font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+/* 위험 태그 */
+.pen-risk-tag { display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 11px; font-weight: 600; margin-left: 4px; }
+.pen-risk-risky { background: color-mix(in srgb, var(--profit) 14%, transparent); color: var(--profit); }
+.pen-risk-safe { background: color-mix(in srgb, #2E7D6F 14%, transparent); color: #2E7D6F; }
+
+/* 배분 바 */
+.pen-dist-bars { display: flex; flex-direction: column; gap: 8px; }
+.pen-dist-row { display: grid; grid-template-columns: 140px 1fr 50px 100px; gap: 8px; align-items: center; font-size: 13px; }
+.pen-dist-label { display: flex; align-items: center; gap: 4px; font-size: 13px; }
+.pen-dist-pct { font-size: 13px; }
+.pen-dist-val { font-size: 12px; }
+.pen-bar-risky { background: color-mix(in srgb, var(--profit) 60%, transparent); }
+.pen-bar-safe { background: color-mix(in srgb, #2E7D6F 60%, transparent); }
+
+/* 위험자산 게이지 */
+.pen-gauge { display: flex; flex-direction: column; gap: 6px; }
+.pen-gauge-label { display: flex; gap: 8px; font-size: 14px; align-items: baseline; }
+.pen-gauge-track { position: relative; height: 20px; background: var(--surface-2, #f0f0f0); border-radius: 10px; overflow: visible; }
+.pen-gauge-fill { height: 100%; border-radius: 10px; transition: width 0.3s; }
+.pen-gauge-ok { background: #2E7D6F; }
+.pen-gauge-over { background: var(--profit); }
+.pen-gauge-limit { position: absolute; top: -4px; bottom: -4px; width: 3px; background: var(--text); border-radius: 2px; transform: translateX(-50%); }
+.pen-gauge-warn { color: var(--profit); font-size: 13px; font-weight: 500; margin: 0; }
+
+/* 보유 테이블 */
+.pen-holdings-table-wrap { overflow-x: auto; }
+.pen-holdings-table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 500px; }
+.pen-holdings-table th { font-weight: 600; padding: 8px; border-bottom: 2px solid var(--border); text-align: left; }
+.pen-holdings-table td { padding: 8px; border-bottom: 1px solid var(--border); }
+
+/* 입력 */
+.pen-input-toggle { align-self: flex-start; }
+.pen-input { display: flex; flex-direction: column; gap: 12px; padding: 16px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+
+.pen-text-input textarea { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); font-size: 13px; font-family: var(--font-mono, monospace); resize: vertical; }
+
+.pen-direct-input { display: flex; flex-direction: column; gap: 8px; }
+.pen-input-row { display: flex; gap: 8px; align-items: center; }
+.pen-input-name { flex: 2; height: 36px; padding: 0 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); font-size: 13px; }
+.pen-input-class { flex: 1.5; height: 36px; padding: 0 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); font-size: 13px; }
+.pen-input-amount { flex: 1; height: 36px; padding: 0 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); font-size: 13px; text-align: right; }
+.pen-input-del { width: 30px; height: 30px; border: none; background: transparent; color: var(--text-muted); cursor: pointer; font-size: 18px; }
+.pen-input-del:hover { color: var(--loss); }
+.pen-input-actions { display: flex; gap: 8px; }
+.pen-error { color: var(--loss); font-size: 13px; margin: 0; }
+
+/* 리밸런싱 */
+.pen-extra { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.pen-extra label { font-size: 14px; color: var(--text-muted); }
+.pen-extra input { height: 36px; width: 160px; padding: 0 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); text-align: right; }
+
+.pen-target-inputs { display: flex; flex-direction: column; gap: 8px; }
+.pen-target-inputs h4 { font-size: 14px; margin: 0; }
+.pen-target-row { display: flex; align-items: center; gap: 8px; }
+.pen-target-label { min-width: 120px; display: flex; align-items: center; gap: 4px; font-size: 13px; }
+.pen-target-pct-input { width: 70px; height: 34px; padding: 0 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); text-align: right; font-size: 14px; }
+.pen-target-current { font-size: 12px; }
+.pen-target-total { font-size: 14px; font-weight: 600; padding-top: 4px; }
+
+/* 시뮬 결과 */
+.pen-sim-result { display: flex; flex-direction: column; gap: 16px; padding: 16px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+.pen-limit-warn { padding: 12px; border-radius: 8px; background: color-mix(in srgb, var(--profit) 10%, transparent); border: 1px solid var(--profit); }
+.pen-limit-warn strong { color: var(--profit); }
+.pen-limit-warn p { margin: 4px 0 0; font-size: 13px; }
+.pen-badge-warn { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; background: color-mix(in srgb, var(--profit) 14%, transparent); color: var(--profit); margin-left: 8px; }
+
+/* 조정 테이블 */
+.pen-adjust-wrap { overflow-x: auto; }
+.pen-adjust-table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 520px; }
+.pen-adjust-table th { font-weight: 600; padding: 8px; border-bottom: 2px solid var(--border); text-align: left; }
+.pen-adjust-table td { padding: 8px; border-bottom: 1px solid var(--border); }
+.pen-adjust-table tfoot td { font-weight: 600; border-top: 2px solid var(--border); border-bottom: none; }
+
+.pen-save-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.pen-memo { flex: 1; min-width: 200px; height: 36px; padding: 0 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); font-size: 13px; }
+
+/* 보정 제안 */
+.pen-corrected { display: flex; flex-direction: column; gap: 12px; padding: 14px; border: 1px dashed var(--accent, #2E7D6F); border-radius: 10px; }
+
+/* 계획 이력 */
+.pen-plans { display: flex; flex-direction: column; gap: 8px; }
+.pen-plan-card { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.pen-plan-card.pen-plan-warn { border-color: var(--profit); }
+.pen-plan-head { display: flex; gap: 12px; align-items: center; padding: 12px 14px; cursor: pointer; font-size: 13px; flex-wrap: wrap; }
+.pen-plan-head:hover { background: var(--surface-2); }
+.pen-plan-toggle { margin-left: auto; color: var(--text-muted); }
+.pen-plan-detail { padding: 0 14px 14px; display: flex; flex-direction: column; gap: 10px; }
+.pen-plan-memo { font-size: 13px; color: var(--text-muted); margin: 0; padding: 8px; background: var(--surface-2); border-radius: 6px; }
+.pen-plan-del { align-self: flex-end; border: none; background: transparent; color: var(--text-muted); cursor: pointer; font-size: 13px; }
+.pen-plan-del:hover { color: var(--loss); }
+
+/* 자산군 설정 */
+.pen-class-list { display: flex; flex-direction: column; gap: 6px; }
+.pen-class-item { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; }
+.pen-class-name { font-weight: 500; }
+.pen-class-toggle { border: 1px solid var(--border); background: transparent; border-radius: 4px; padding: 2px 8px; font-size: 11px; cursor: pointer; color: var(--text-muted); }
+.pen-class-toggle:hover { background: var(--surface-2); }
+.pen-class-del { border: none; background: transparent; color: var(--text-muted); cursor: pointer; font-size: 13px; }
+.pen-class-del:hover { color: var(--loss); }
+.pen-class-add { display: flex; gap: 8px; align-items: center; }
+.pen-class-add input { height: 36px; padding: 0 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); font-size: 13px; flex: 1; }
+.pen-class-add select { height: 36px; padding: 0 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); font-size: 13px; }
+
+.pen-limit-info { padding: 12px; border: 1px solid var(--border); border-radius: 8px; }
+.pen-limit-info h4 { margin: 0 0 4px; font-size: 14px; }
+.pen-limit-info p { margin: 2px 0; font-size: 13px; }
+
+/* 공통 */
+.pen-notice { color: var(--text-muted); font-size: 13px; text-align: center; padding: 20px; }
+.pen-disclaimer { color: var(--text-muted); font-size: 12px; text-align: center; padding: 12px; margin-top: 8px; border-top: 1px solid var(--border); }
+.pen-no-acct-banner { padding: 10px 14px; border-radius: 8px; background: color-mix(in srgb, var(--accent, #2E7D6F) 10%, transparent); color: var(--text); font-size: 13px; margin-bottom: 4px; }
+
+/* 반응형 */
+@media (max-width: 768px) {
+  .pen-dist-row { grid-template-columns: 100px 1fr 40px 80px; gap: 4px; font-size: 12px; }
+  .pen-input-row { flex-wrap: wrap; }
+  .pen-input-name, .pen-input-class, .pen-input-amount { flex: none; width: 100%; }
+  .pen-target-row { flex-wrap: wrap; }
+  .pen-target-label { min-width: 100%; }
+  .pen-summary { grid-template-columns: 1fr 1fr; }
+  .pen-plan-head { font-size: 12px; gap: 6px; }
+}

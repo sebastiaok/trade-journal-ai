@@ -12,12 +12,13 @@ export type Source = 'vision' | 'manual' | 'opening' | 'api';
 // IRP는 자금 출처에 따라 둘로 구분한다.
 //  irp        : 개인 자기부담 IRP (세액공제 대상 자기부담금 납입)
 //  irp_dc     : DC(확정기여형) 전환 IRP (퇴직급여 이전분 — 자기부담금/세액공제와 분리 관리)
-export type AccountType = 'general' | 'isa' | 'pension' | 'irp' | 'irp_dc';
+export type AccountType = 'general' | 'isa' | 'pension' | 'irp' | 'irp_dc' | 'dc';
 //  general : 일반 매매 계좌  (복기: 승률·손익비·MDD)
 //  isa     : ISA            (복기: 누적 수익률 / 납입한도·비과세 트래커)
 //  pension : 연금저축        (복기: 수익률·CAGR / 세액공제 트래커)
 //  irp     : IRP(자기부담)    (복기: 수익률·CAGR / 세액공제 트래커)
 //  irp_dc  : IRP(DC 전환)     (복기: 수익률·CAGR / 세액공제·연납입한도에서 제외)
+//  dc      : DC(확정기여형)    (퇴직연금 — 자산군 기준 관리, FIFO 비적용)
 
 /** 적립형(연금성) 계좌 여부 — 납입/인출 중심, 수익률·CAGR 복기 */
 export const ACCUMULATION_TYPES: AccountType[] = ['isa', 'pension', 'irp', 'irp_dc'];
@@ -283,6 +284,68 @@ export interface BrokerTokenCache {
   expiresAt: string;
   createdAt: string;
 }
+
+/* ───────── 퇴직연금 DC/IRP 포트폴리오 (Phase 9) ───────── */
+
+export type PensionRiskType = 'risky' | 'safe';
+
+/** 자산군 마스터 (위험/안전 분류, 설정 가능) */
+export interface PensionAssetClass {
+  id: string;
+  userId?: string;         // null = 기본 제공
+  name: string;
+  riskType: PensionRiskType;
+  sortOrder: number;
+}
+
+/** 연금 상품 보유 (현재 배분) */
+export interface PensionHolding {
+  id: string;
+  accountId: string;
+  productName: string;
+  assetClassId?: string;
+  evalAmount: number;       // 평가금액
+  updatedAt: string;
+}
+
+/** 리밸런싱 계획 내 자산군별 배분 항목 */
+export interface PensionAllocItem {
+  assetClassId: string;
+  name: string;
+  riskType: PensionRiskType;
+  targetPct: number;        // 목표 비중 (%)
+  targetAmount: number;     // 목표 금액
+  currentAmount: number;    // 현재 금액
+  adjust: number;           // 조정액 (양수=증액, 음수=감액)
+}
+
+/** 리밸런싱 시뮬레이션 계획 (실행 아님) */
+export interface PensionRebalancePlan {
+  id: string;
+  accountId: string;
+  totalAmount: number;
+  extraContrib: number;     // 추가 납입액
+  targetAlloc: PensionAllocItem[];
+  riskyRatio?: number;      // 위험자산 비중 (%)
+  limitPct?: number;        // 적용된 한도 (%)
+  limitOk?: boolean;        // 한도 준수 여부
+  memo?: string;
+  plannedAt: string;        // YYYY-MM-DD
+  createdAt: string;
+}
+
+/** 위험자산 비중 한도 (연도·계좌유형별) */
+export interface PensionRiskLimit {
+  id: string;
+  accountType: string;      // dc / irp
+  year: number;
+  riskyLimitPct: number;    // 한도 (%)
+  note?: string;
+}
+
+/** DC 계좌 여부 (퇴직연금 전용 메뉴 대상) */
+export const DC_TYPES: AccountType[] = ['dc'];
+export const isDcAccount = (t: AccountType) => DC_TYPES.includes(t);
 
 /** 수기 입력 폼 기본값 헬퍼 */
 export function emptyTrade(accountId: string): Omit<Trade, 'id'> {
